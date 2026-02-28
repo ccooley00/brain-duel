@@ -906,6 +906,7 @@ POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
 
 games = {}       # game_id -> game dict
 rooms = {}       # room_code -> game_id (for games waiting for player 2)
+leaderboard = [] # top 10 fastest total times [{name, total_time, score, date}]
 game_lock = threading.Lock()  # protects games/rooms from concurrent access
 STALE_TIMEOUT = 30  # seconds before a waiting game is considered abandoned
 recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
@@ -1033,6 +1034,8 @@ def get_safe_state(game, player_id):
             state["outcome"] = "lose"
         else:
             state["outcome"] = "tie"
+        state["your_total_time"] = round(p.get("total_time", 0), 1)
+        state["opponent_total_time"] = round(opponent.get("total_time", 0), 1)
 
     return state
 
@@ -1056,6 +1059,8 @@ def advance_round(game):
     result = {"round": rd + 1, "category": q["category"], "question": q["question"],
               "correct_answer": correct_answer, "players": {}}
 
+    round_start = game.get("round_start") or game["created_at"]
+
     for pid, a in rd_answers.items():
         is_correct = a["choice"] == correct_answer
         points = 0
@@ -1064,12 +1069,15 @@ def advance_round(game):
             if pid == first_pid:
                 points += POINTS_SPEED_BONUS
         game["players"][pid]["score"] += points
+        time_taken = round(a["time"] - round_start, 2)
+        game["players"][pid]["total_time"] += time_taken
         pname = game["players"][pid]["name"]
         result["players"][pname] = {
             "choice": a["choice"],
             "correct": is_correct,
             "points": points,
             "was_first": pid == first_pid,
+            "time_taken": time_taken,
         }
 
     game["round_results"].append(result)
@@ -1079,8 +1087,26 @@ def advance_round(game):
     # After a short display period the client will request next round
     if rd + 1 >= TOTAL_ROUNDS:
         game["state"] = "finished"
+        _update_leaderboard(game)
     else:
         game["round"] += 1
+
+
+def _update_leaderboard(game):
+    """Add players from a finished game to the leaderboard if they qualify."""
+    import datetime
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    for pid in game["player_order"]:
+        p = game["players"][pid]
+        entry = {
+            "name": p["name"],
+            "total_time": round(p["total_time"], 1),
+            "score": p["score"],
+            "date": date_str,
+        }
+        leaderboard.append(entry)
+    leaderboard.sort(key=lambda e: (-e["score"], e["total_time"]))
+    del leaderboard[10:]  # keep only top 10
 
 
 def next_round_if_ready(game):
@@ -1139,6 +1165,10 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
 
         if path == "/" or path == "/index.html":
             self._serve_file(os.path.join(PUBLIC_DIR, "index.html"), "text/html; charset=utf-8")
+            return
+
+        if path == "/api/leaderboard":
+            self._json_response(leaderboard)
             return
 
         if path == "/api/state":
@@ -1200,7 +1230,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                         self._json_response({"error": "Room is no longer available."}, 404)
                         return
                     game = games[game_id]
-                    game["players"][player_id] = {"name": name, "score": 0}
+                    game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
                     game["player_order"].append(player_id)
                     game["state"] = "lobby"
                     del rooms[room_code]
@@ -1210,7 +1240,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                     game = new_game()
                     code = generate_room_code()
                     game["room_code"] = code
-                    game["players"][player_id] = {"name": name, "score": 0}
+                    game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
                     game["player_order"].append(player_id)
                     rooms[code] = game["id"]
                     self._json_response({"game_id": game["id"], "player_id": player_id, "room_code": code})

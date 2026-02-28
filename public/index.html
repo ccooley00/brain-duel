@@ -305,6 +305,51 @@
   }
   .history-round .hr-q { color: var(--muted); flex: 1; margin-right: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+  /* ── Leaderboard ── */
+  .leaderboard-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 20px;
+  }
+  .leaderboard-box h3 {
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .lb-table th {
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid #334155;
+  }
+  .lb-table td {
+    padding: 8px;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #1a2744;
+  }
+  .lb-table tr:last-child td { border-bottom: none; }
+  .lb-rank { color: var(--yellow); font-weight: 700; width: 30px; }
+  .lb-name { font-weight: 600; }
+  .lb-time { color: var(--accent); font-weight: 600; }
+  .lb-score { color: var(--green); }
+  .lb-empty { text-align: center; color: var(--muted); padding: 16px; font-style: italic; }
+  .total-time-display {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
   @media (max-width: 500px) {
     h1 { font-size: 1.8rem; }
     .choices { grid-template-columns: 1fr; }
@@ -341,6 +386,10 @@
           10 rounds &middot; Math, Logic, Words, Trivia &amp; Picture Rounds<br>
           Answer fast for bonus points!
         </p>
+      </div>
+      <div class="leaderboard-box" id="leaderboard-join">
+        <h3>Fastest Times Leaderboard</h3>
+        <div id="lb-content"><p class="lb-empty">Loading...</p></div>
       </div>
     </div>
 
@@ -433,13 +482,19 @@
           <div class="final-score-card">
             <div class="fs-name" id="go-your-name">You</div>
             <div class="fs-score" id="go-your-score" style="color:var(--accent);">0</div>
+            <div class="total-time-display" id="go-your-time"></div>
           </div>
           <div class="final-score-card">
             <div class="fs-name" id="go-opp-name">Opponent</div>
             <div class="fs-score" id="go-opp-score" style="color:var(--accent2);">0</div>
+            <div class="total-time-display" id="go-opp-time"></div>
           </div>
         </div>
         <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
+        <div class="leaderboard-box" id="leaderboard-gameover" style="margin-top:20px;">
+          <h3>Fastest Times Leaderboard</h3>
+          <div id="lb-gameover-content"><p class="lb-empty">Loading...</p></div>
+        </div>
         <div class="history" id="go-history"></div>
       </div>
     </div>
@@ -455,6 +510,16 @@
   let pollInterval = 1000;
 
   const $ = id => document.getElementById(id);
+
+  // Restore saved name from localStorage
+  (function loadSavedName() {
+    const saved = localStorage.getItem('brain_duel_name');
+    if (saved) $('name-input').value = saved;
+  })();
+
+  function saveName(name) {
+    localStorage.setItem('brain_duel_name', name);
+  }
 
   // Headers needed to bypass ngrok's free-tier browser warning on API calls
   const API_HEADERS = {
@@ -539,6 +604,7 @@
       gameId = data.game_id;
       playerId = data.player_id;
       roomCode = data.room_code;
+      saveName(name);
       saveSession();
 
       $('room-code-display').textContent = roomCode;
@@ -585,6 +651,7 @@
       }
       gameId = data.game_id;
       playerId = data.player_id;
+      saveName(name);
       saveSession();
 
       showScreen('waiting');
@@ -766,8 +833,12 @@
 
       $('go-your-name').textContent = s.your_name;
       $('go-your-score').textContent = s.your_score;
+      $('go-your-time').textContent = s.your_total_time + 's total';
       $('go-opp-name').textContent = s.opponent_name;
       $('go-opp-score').textContent = s.opponent_score;
+      $('go-opp-time').textContent = s.opponent_total_time + 's total';
+
+      fetchLeaderboard('lb-gameover-content');
 
       if (s.outcome === 'win') {
         $('go-icon').innerHTML = '&#127942;';
@@ -827,6 +898,36 @@
       // Will sync on next poll
     }
   }
+
+  async function fetchLeaderboard(targetId) {
+    try {
+      const res = await fetch('/api/leaderboard', {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      });
+      const data = await res.json();
+      const el = $(targetId);
+      if (!data || data.length === 0) {
+        el.innerHTML = '<p class="lb-empty">No games completed yet. Be the first!</p>';
+        return;
+      }
+      let html = '<table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Time</th></tr></thead><tbody>';
+      data.forEach((entry, i) => {
+        html += `<tr>
+          <td class="lb-rank">${i + 1}</td>
+          <td class="lb-name">${entry.name}</td>
+          <td class="lb-score">${entry.score}</td>
+          <td class="lb-time">${entry.total_time}s</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    } catch (e) {
+      $(targetId).innerHTML = '<p class="lb-empty">Could not load leaderboard.</p>';
+    }
+  }
+
+  // Load leaderboard on page load
+  fetchLeaderboard('lb-content');
 
   async function submitAnswer(choice, btn) {
     document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
