@@ -1,0 +1,1284 @@
+"""
+Brain Duel - A 2-player networked trivia & logic challenge game.
+Run: python server.py
+Then open http://localhost:8080 in two browser tabs (or on two different machines).
+For remote play, use your public IP or set up port forwarding on port 8080.
+"""
+
+import collections
+import http.server
+import json
+import os
+import random
+import threading
+import time
+import urllib.parse
+import uuid
+
+# ── Question Bank ────────────────────────────────────────────────────────────
+
+QUESTIONS = [
+    # ── Math Challenges ──
+    {
+        "category": "Math",
+        "question": "What is 17 × 6?",
+        "choices": ["92", "96", "102", "108"],
+        "answer": "102",
+    },
+    {
+        "category": "Math",
+        "question": "What is 144 ÷ 12?",
+        "choices": ["10", "11", "12", "14"],
+        "answer": "12",
+    },
+    {
+        "category": "Math",
+        "question": "If you buy 3 items at $4.50 each, what is the total?",
+        "choices": ["$12.00", "$13.50", "$14.50", "$15.00"],
+        "answer": "$13.50",
+    },
+    {
+        "category": "Math",
+        "question": "What is the next number in the pattern: 2, 6, 18, 54, ...?",
+        "choices": ["108", "162", "72", "96"],
+        "answer": "162",
+    },
+    {
+        "category": "Math",
+        "question": "How many seconds are in one hour?",
+        "choices": ["360", "3600", "600", "36000"],
+        "answer": "3600",
+    },
+    {
+        "category": "Math",
+        "question": "What is 25% of 200?",
+        "choices": ["25", "40", "50", "75"],
+        "answer": "50",
+    },
+    {
+        "category": "Math",
+        "question": "A rectangle has sides of 8 and 5. What is its area?",
+        "choices": ["13", "26", "40", "45"],
+        "answer": "40",
+    },
+    {
+        "category": "Math",
+        "question": "What is 9 squared?",
+        "choices": ["18", "72", "81", "99"],
+        "answer": "81",
+    },
+    # ── Logic Puzzles ──
+    {
+        "category": "Logic",
+        "question": "If all Bloops are Razzles and all Razzles are Lazzles, are all Bloops definitely Lazzles?",
+        "choices": ["Yes", "No", "Maybe", "Not enough info"],
+        "answer": "Yes",
+    },
+    {
+        "category": "Logic",
+        "question": "I have cities but no houses, forests but no trees, and water but no fish. What am I?",
+        "choices": ["A dream", "A map", "A painting", "A story"],
+        "answer": "A map",
+    },
+    {
+        "category": "Logic",
+        "question": "A farmer has 17 sheep. All but 9 run away. How many sheep does he have left?",
+        "choices": ["8", "9", "17", "0"],
+        "answer": "9",
+    },
+    {
+        "category": "Logic",
+        "question": "Which weighs more: a pound of feathers or a pound of bricks?",
+        "choices": ["Feathers", "Bricks", "They weigh the same", "Depends on gravity"],
+        "answer": "They weigh the same",
+    },
+    {
+        "category": "Logic",
+        "question": "If there are 3 apples and you take away 2, how many apples do YOU have?",
+        "choices": ["1", "2", "3", "0"],
+        "answer": "2",
+    },
+    {
+        "category": "Logic",
+        "question": "What comes once in a minute, twice in a moment, but never in a thousand years?",
+        "choices": ["The letter M", "Time", "A second", "Nothing"],
+        "answer": "The letter M",
+    },
+    {
+        "category": "Logic",
+        "question": "A is the father of B. But B is not the son of A. How is that possible?",
+        "choices": ["B is adopted", "B is A's daughter", "They are not related", "A is lying"],
+        "answer": "B is A's daughter",
+    },
+    {
+        "category": "Logic",
+        "question": "How many months have 28 days?",
+        "choices": ["1", "2", "6", "All 12"],
+        "answer": "All 12",
+    },
+    # ── Word Puzzles ──
+    {
+        "category": "Words",
+        "question": "Unscramble this word: ZZLEPU",
+        "choices": ["PUZZLE", "MUZZLE", "FIZZLE", "NUZZLE"],
+        "answer": "PUZZLE",
+    },
+    {
+        "category": "Words",
+        "question": "Which word means the OPPOSITE of 'ancient'?",
+        "choices": ["Old", "Historic", "Modern", "Classic"],
+        "answer": "Modern",
+    },
+    {
+        "category": "Words",
+        "question": "What 5-letter word becomes shorter when you add two letters to it?",
+        "choices": ["Small", "Short", "Brief", "Tiny"],
+        "answer": "Short",
+    },
+    {
+        "category": "Words",
+        "question": "Unscramble: CIENSCE",
+        "choices": ["SILENCE", "SCIENCE", "LICENSE", "SCENICE"],
+        "answer": "SCIENCE",
+    },
+    {
+        "category": "Words",
+        "question": "Which word does NOT belong: Apple, Banana, Carrot, Grape?",
+        "choices": ["Apple", "Banana", "Carrot", "Grape"],
+        "answer": "Carrot",
+    },
+    {
+        "category": "Words",
+        "question": "What word is spelled incorrectly in every dictionary?",
+        "choices": ["Pneumonia", "Incorrectly", "Rhythm", "Onomatopoeia"],
+        "answer": "Incorrectly",
+    },
+    # ── Trivia ──
+    {
+        "category": "Trivia",
+        "question": "How many planets are in our solar system?",
+        "choices": ["7", "8", "9", "10"],
+        "answer": "8",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the largest ocean on Earth?",
+        "choices": ["Atlantic", "Indian", "Pacific", "Arctic"],
+        "answer": "Pacific",
+    },
+    {
+        "category": "Trivia",
+        "question": "What gas do plants absorb from the atmosphere?",
+        "choices": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Helium"],
+        "answer": "Carbon Dioxide",
+    },
+    {
+        "category": "Trivia",
+        "question": "How many sides does a hexagon have?",
+        "choices": ["5", "6", "7", "8"],
+        "answer": "6",
+    },
+    {
+        "category": "Trivia",
+        "question": "Which animal is known as the 'King of the Jungle'?",
+        "choices": ["Tiger", "Elephant", "Lion", "Gorilla"],
+        "answer": "Lion",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the boiling point of water in Fahrenheit?",
+        "choices": ["100°", "200°", "212°", "220°"],
+        "answer": "212°",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the hardest natural substance on Earth?",
+        "choices": ["Gold", "Iron", "Diamond", "Quartz"],
+        "answer": "Diamond",
+    },
+    {
+        "category": "Trivia",
+        "question": "Which planet is closest to the Sun?",
+        "choices": ["Venus", "Mercury", "Mars", "Earth"],
+        "answer": "Mercury",
+    },
+    # ── Strategy / Would You Rather (opinion-based speed rounds) ──
+    {
+        "category": "Speed Round",
+        "question": "Quick! Pick the LARGEST number:",
+        "choices": ["999", "10001", "9999", "1001"],
+        "answer": "10001",
+    },
+    {
+        "category": "Speed Round",
+        "question": "Which of these is NOT a primary color?",
+        "choices": ["Red", "Blue", "Green", "Yellow"],
+        "answer": "Green",
+    },
+    {
+        "category": "Speed Round",
+        "question": "How many legs does a spider have?",
+        "choices": ["6", "8", "10", "12"],
+        "answer": "8",
+    },
+    {
+        "category": "Speed Round",
+        "question": "What shape has the most sides: triangle, square, pentagon, or hexagon?",
+        "choices": ["Triangle", "Square", "Pentagon", "Hexagon"],
+        "answer": "Hexagon",
+    },
+    # ── Picture Round (Emoji) ──
+    {
+        "category": "Picture Round",
+        "question": "What animal is this?",
+        "image": {"type": "emoji", "content": "\U0001F98A"},
+        "choices": ["Wolf", "Fox", "Dog", "Coyote"],
+        "answer": "Fox",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What animal is this?",
+        "image": {"type": "emoji", "content": "\U0001F419"},
+        "choices": ["Squid", "Jellyfish", "Octopus", "Starfish"],
+        "answer": "Octopus",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What fruit is this?",
+        "image": {"type": "emoji", "content": "\U0001F34D"},
+        "choices": ["Mango", "Pineapple", "Papaya", "Durian"],
+        "answer": "Pineapple",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What instrument is this?",
+        "image": {"type": "emoji", "content": "\U0001F3B7"},
+        "choices": ["Trumpet", "Clarinet", "Saxophone", "Trombone"],
+        "answer": "Saxophone",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What sport is this?",
+        "image": {"type": "emoji", "content": "\U0001F3D3"},
+        "choices": ["Tennis", "Badminton", "Table Tennis", "Squash"],
+        "answer": "Table Tennis",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What does this emoji represent?",
+        "image": {"type": "emoji", "content": "\U0001F3F0"},
+        "choices": ["Church", "Castle", "Palace", "Fortress"],
+        "answer": "Castle",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What animal is this?",
+        "image": {"type": "emoji", "content": "\U0001F9AB"},
+        "choices": ["Beaver", "Otter", "Platypus", "Muskrat"],
+        "answer": "Beaver",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What is this object?",
+        "image": {"type": "emoji", "content": "\U0001FA90"},
+        "choices": ["Compass", "Gyroscope", "Yo-Yo", "Spinning Top"],
+        "answer": "Yo-Yo",
+    },
+    # ── Picture Round (Flags — hosted images) ──
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/jp.png", "alt": "A country flag"},
+        "choices": ["China", "Japan", "South Korea", "Bangladesh"],
+        "answer": "Japan",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/br.png", "alt": "A country flag"},
+        "choices": ["Brazil", "Portugal", "Bolivia", "Colombia"],
+        "answer": "Brazil",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/ca.png", "alt": "A country flag"},
+        "choices": ["United States", "Canada", "Switzerland", "Peru"],
+        "answer": "Canada",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/za.png", "alt": "A country flag"},
+        "choices": ["Kenya", "Nigeria", "South Africa", "Ghana"],
+        "answer": "South Africa",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/in.png", "alt": "A country flag"},
+        "choices": ["India", "Ireland", "Italy", "Iran"],
+        "answer": "India",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/de.png", "alt": "A country flag"},
+        "choices": ["Belgium", "Germany", "Netherlands", "Luxembourg"],
+        "answer": "Germany",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/au.png", "alt": "A country flag"},
+        "choices": ["New Zealand", "Australia", "Fiji", "United Kingdom"],
+        "answer": "Australia",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/mx.png", "alt": "A country flag"},
+        "choices": ["Italy", "Mexico", "Hungary", "Ireland"],
+        "answer": "Mexico",
+    },
+    # ── Minecraft & Roblox ──
+    {
+        "category": "Minecraft",
+        "question": "What is the name of the final boss in Minecraft?",
+        "choices": ["Wither", "Ender Dragon", "Elder Guardian", "Warden"],
+        "answer": "Ender Dragon",
+    },
+    {
+        "category": "Minecraft",
+        "question": "How many obsidian blocks do you need to build a Nether portal?",
+        "choices": ["8", "10", "12", "14"],
+        "answer": "10",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What do you get when you smelt iron ore?",
+        "choices": ["Iron Nugget", "Iron Ingot", "Iron Block", "Raw Iron"],
+        "answer": "Iron Ingot",
+    },
+    {
+        "category": "Minecraft",
+        "question": "Which mob explodes when it gets close to you?",
+        "image": {"type": "emoji", "content": "\U0001F4A5"},
+        "choices": ["Zombie", "Skeleton", "Creeper", "Enderman"],
+        "answer": "Creeper",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What material do you need to mine diamonds?",
+        "choices": ["Stone Pickaxe", "Iron Pickaxe", "Gold Pickaxe", "Wooden Pickaxe"],
+        "answer": "Iron Pickaxe",
+    },
+    {
+        "category": "Roblox",
+        "question": "What is the in-game currency in Roblox?",
+        "choices": ["Robux", "V-Bucks", "Coins", "Gems"],
+        "answer": "Robux",
+    },
+    {
+        "category": "Roblox",
+        "question": "What programming language are Roblox games scripted in?",
+        "choices": ["Python", "JavaScript", "Lua", "C++"],
+        "answer": "Lua",
+    },
+    {
+        "category": "Roblox",
+        "question": "What is the name of the Roblox game-creation tool?",
+        "choices": ["Roblox Creator", "Roblox Studio", "Roblox Builder", "Roblox Workshop"],
+        "answer": "Roblox Studio",
+    },
+    {
+        "category": "Roblox",
+        "question": "In Roblox, what are player-created games called?",
+        "choices": ["Worlds", "Experiences", "Levels", "Servers"],
+        "answer": "Experiences",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What dimension do you enter through an End Portal?",
+        "choices": ["The Nether", "The End", "The Aether", "The Void"],
+        "answer": "The End",
+    },
+    # ── More Text Questions ──
+    {
+        "category": "Math",
+        "question": "What is the square root of 144?",
+        "choices": ["10", "11", "12", "14"],
+        "answer": "12",
+    },
+    {
+        "category": "Math",
+        "question": "What is 15% of 80?",
+        "choices": ["8", "10", "12", "15"],
+        "answer": "12",
+    },
+    {
+        "category": "Logic",
+        "question": "If you rearrange the letters 'CIFAIPC', you get the name of a(n):",
+        "choices": ["City", "Animal", "Ocean", "Country"],
+        "answer": "Ocean",
+    },
+    {
+        "category": "Logic",
+        "question": "A bat and a ball cost $1.10 together. The bat costs $1.00 more than the ball. How much does the ball cost?",
+        "choices": ["$0.10", "$0.05", "$0.15", "$0.01"],
+        "answer": "$0.05",
+    },
+    {
+        "category": "Words",
+        "question": "Which word is a palindrome?",
+        "choices": ["LEVEL", "LEVER", "LEMON", "LLAMA"],
+        "answer": "LEVEL",
+    },
+    {
+        "category": "Words",
+        "question": "Unscramble: OEALNMWERT",
+        "choices": ["WATERMELON", "TRAMPOLINE", "METRONOME", "Melbourne"],
+        "answer": "WATERMELON",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the smallest country in the world by area?",
+        "choices": ["Monaco", "Vatican City", "San Marino", "Liechtenstein"],
+        "answer": "Vatican City",
+    },
+    {
+        "category": "Trivia",
+        "question": "What element does 'O' represent on the periodic table?",
+        "choices": ["Osmium", "Oganesson", "Oxygen", "Gold"],
+        "answer": "Oxygen",
+    },
+    {
+        "category": "Trivia",
+        "question": "Which planet has the most moons?",
+        "choices": ["Jupiter", "Saturn", "Uranus", "Neptune"],
+        "answer": "Saturn",
+    },
+    # ── YouTubers ──
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is famous for giving away millions of dollars and extreme challenges?",
+        "choices": ["PewDiePie", "MrBeast", "Markiplier", "DanTDM"],
+        "answer": "MrBeast",
+    },
+    {
+        "category": "YouTubers",
+        "question": "What is MrBeast's real first name?",
+        "choices": ["Jimmy", "James", "Jake", "Jordan"],
+        "answer": "Jimmy",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber was once the most subscribed individual creator and is known for meme reviews?",
+        "choices": ["Ninja", "MrBeast", "PewDiePie", "KSI"],
+        "answer": "PewDiePie",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which Minecraft YouTuber is known for speedruns and the Dream SMP?",
+        "choices": ["Technoblade", "Dream", "Skeppy", "Philza"],
+        "answer": "Dream",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is known for the Diamond Minecart series?",
+        "choices": ["Unspeakable", "SSundee", "DanTDM", "Preston"],
+        "answer": "DanTDM",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is known for trick shots and sports challenges with a group of friends?",
+        "choices": ["Dude Perfect", "MrBeast", "Ninja", "Jelly"],
+        "answer": "Dude Perfect",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which Minecraft YouTuber was known as 'The Blade' and for never dying?",
+        "choices": ["Dream", "Technoblade", "Philza", "Sapnap"],
+        "answer": "Technoblade",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber says 'Was that the bite of '87?!' and is known for horror game playthroughs?",
+        "choices": ["Jacksepticeye", "PewDiePie", "Markiplier", "CoryxKenshin"],
+        "answer": "Markiplier",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is known for Roblox content and the 'Albert' channel?",
+        "choices": ["Denis", "Flamingo", "Jelly", "Kreekcraft"],
+        "answer": "Flamingo",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which content creator became famous for streaming Fortnite and has blue hair?",
+        "choices": ["Ninja", "Tfue", "Lazarbeam", "SypherPK"],
+        "answer": "Ninja",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is known for Minecraft and Roblox videos and saying 'What's up guys, SSundee here'?",
+        "choices": ["DanTDM", "SSundee", "Preston", "Unspeakable"],
+        "answer": "SSundee",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which female YouTuber is one of the most popular Minecraft content creators with roleplay stories?",
+        "choices": ["LDShadowLady", "Aphmau", "iHasCupquake", "Stacy"],
+        "answer": "Aphmau",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is known for crazy Minecraft builds and water park challenges?",
+        "choices": ["Preston", "Unspeakable", "Jelly", "Kwebbelkop"],
+        "answer": "Unspeakable",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber runs the channels PrestonPlayz and TBNRFrags?",
+        "choices": ["SSundee", "Unspeakable", "Preston", "Lazarbeam"],
+        "answer": "Preston",
+    },
+    {
+        "category": "YouTubers",
+        "question": "Which YouTuber is known for funny gaming videos and is part of the 'Robust' trio with Slogo and Crainer?",
+        "choices": ["Flamingo", "Jelly", "Kwebbelkop", "Lazarbeam"],
+        "answer": "Jelly",
+    },
+    # ── More Math ──
+    {
+        "category": "Math",
+        "question": "What is 13 × 7?",
+        "choices": ["84", "87", "91", "97"],
+        "answer": "91",
+    },
+    {
+        "category": "Math",
+        "question": "What is 1000 ÷ 8?",
+        "choices": ["120", "125", "130", "150"],
+        "answer": "125",
+    },
+    {
+        "category": "Math",
+        "question": "What is 3/4 as a decimal?",
+        "choices": ["0.25", "0.50", "0.75", "0.80"],
+        "answer": "0.75",
+    },
+    {
+        "category": "Math",
+        "question": "If a triangle has angles of 90° and 45°, what is the third angle?",
+        "choices": ["30°", "45°", "55°", "60°"],
+        "answer": "45°",
+    },
+    {
+        "category": "Math",
+        "question": "What is the next prime number after 7?",
+        "choices": ["8", "9", "10", "11"],
+        "answer": "11",
+    },
+    {
+        "category": "Math",
+        "question": "How many centimeters are in 2.5 meters?",
+        "choices": ["25", "250", "2500", "200"],
+        "answer": "250",
+    },
+    {
+        "category": "Math",
+        "question": "What is 2 to the power of 8?",
+        "choices": ["64", "128", "256", "512"],
+        "answer": "256",
+    },
+    # ── More Logic ──
+    {
+        "category": "Logic",
+        "question": "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
+        "choices": ["100 minutes", "50 minutes", "10 minutes", "5 minutes"],
+        "answer": "5 minutes",
+    },
+    {
+        "category": "Logic",
+        "question": "A doctor gives you 3 pills and says take one every 30 minutes. How long do the pills last?",
+        "choices": ["30 minutes", "60 minutes", "90 minutes", "120 minutes"],
+        "answer": "60 minutes",
+    },
+    {
+        "category": "Logic",
+        "question": "What can you hold in your right hand but never in your left hand?",
+        "choices": ["A ball", "Your left elbow", "A pen", "Your breath"],
+        "answer": "Your left elbow",
+    },
+    {
+        "category": "Logic",
+        "question": "If you overtake the person in 2nd place in a race, what place are you in?",
+        "choices": ["1st", "2nd", "3rd", "It depends"],
+        "answer": "2nd",
+    },
+    {
+        "category": "Logic",
+        "question": "Which is heavier: 100 pounds of rocks or 100 pounds of cotton candy?",
+        "choices": ["Rocks", "Cotton candy", "They weigh the same", "Depends on volume"],
+        "answer": "They weigh the same",
+    },
+    {
+        "category": "Logic",
+        "question": "A man builds a house with all 4 sides facing south. A bear walks past. What color is the bear?",
+        "choices": ["Brown", "Black", "White", "Gray"],
+        "answer": "White",
+    },
+    {
+        "category": "Logic",
+        "question": "What has a head and a tail but no body?",
+        "choices": ["A snake", "A coin", "A worm", "A needle"],
+        "answer": "A coin",
+    },
+    # ── More Words ──
+    {
+        "category": "Words",
+        "question": "Unscramble: TALBOFLO",
+        "choices": ["FOOTBALL", "FOOTFALL", "BOATFULL", "TALLBOOT"],
+        "answer": "FOOTBALL",
+    },
+    {
+        "category": "Words",
+        "question": "Which word means a fear of spiders?",
+        "choices": ["Claustrophobia", "Arachnophobia", "Acrophobia", "Agoraphobia"],
+        "answer": "Arachnophobia",
+    },
+    {
+        "category": "Words",
+        "question": "What is the longest word using only the letters A, B, C, D, and E?",
+        "choices": ["BEAD", "DECADE", "BEADED", "ABACADE"],
+        "answer": "BEADED",
+    },
+    {
+        "category": "Words",
+        "question": "Which word is an antonym of 'generous'?",
+        "choices": ["Kind", "Greedy", "Wealthy", "Cheerful"],
+        "answer": "Greedy",
+    },
+    {
+        "category": "Words",
+        "question": "Unscramble: NARBAAI",
+        "choices": ["BANANA", "ARRABIAN", "NIAGARA", "BANDANA"],
+        "answer": "BANDANA",
+    },
+    {
+        "category": "Words",
+        "question": "Which of these is a compound word?",
+        "choices": ["Butterfly", "Beautiful", "Wonderful", "Powerful"],
+        "answer": "Butterfly",
+    },
+    {
+        "category": "Words",
+        "question": "What word can follow 'sun', 'moon', and 'star' to make new words?",
+        "choices": ["Shine", "Light", "Glow", "Beam"],
+        "answer": "Light",
+    },
+    # ── More Trivia ──
+    {
+        "category": "Trivia",
+        "question": "What is the fastest land animal?",
+        "choices": ["Lion", "Horse", "Cheetah", "Greyhound"],
+        "answer": "Cheetah",
+    },
+    {
+        "category": "Trivia",
+        "question": "How many bones does an adult human have?",
+        "choices": ["186", "206", "226", "256"],
+        "answer": "206",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the largest continent?",
+        "choices": ["Africa", "North America", "Europe", "Asia"],
+        "answer": "Asia",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the chemical formula for water?",
+        "choices": ["CO2", "H2O", "O2", "NaCl"],
+        "answer": "H2O",
+    },
+    {
+        "category": "Trivia",
+        "question": "Which is the only mammal that can fly?",
+        "choices": ["Flying squirrel", "Bat", "Sugar glider", "Pterodactyl"],
+        "answer": "Bat",
+    },
+    {
+        "category": "Trivia",
+        "question": "What year did the Titanic sink?",
+        "choices": ["1905", "1912", "1920", "1898"],
+        "answer": "1912",
+    },
+    {
+        "category": "Trivia",
+        "question": "What is the tallest mountain in the world?",
+        "choices": ["K2", "Mount Kilimanjaro", "Mount Everest", "Mount Fuji"],
+        "answer": "Mount Everest",
+    },
+    # ── More Speed Round ──
+    {
+        "category": "Speed Round",
+        "question": "Quick! Which of these numbers is odd?",
+        "choices": ["14", "22", "37", "48"],
+        "answer": "37",
+    },
+    {
+        "category": "Speed Round",
+        "question": "Which direction does the sun rise from?",
+        "choices": ["North", "South", "East", "West"],
+        "answer": "East",
+    },
+    {
+        "category": "Speed Round",
+        "question": "How many vowels are in the word 'EDUCATION'?",
+        "choices": ["3", "4", "5", "6"],
+        "answer": "5",
+    },
+    {
+        "category": "Speed Round",
+        "question": "Which is the smallest: millimeter, centimeter, meter, or kilometer?",
+        "choices": ["Centimeter", "Millimeter", "Meter", "Kilometer"],
+        "answer": "Millimeter",
+    },
+    {
+        "category": "Speed Round",
+        "question": "How many zeros are in one million?",
+        "choices": ["5", "6", "7", "8"],
+        "answer": "6",
+    },
+    {
+        "category": "Speed Round",
+        "question": "Quick! What is half of 250?",
+        "choices": ["100", "120", "125", "150"],
+        "answer": "125",
+    },
+    # ── More Minecraft ──
+    {
+        "category": "Minecraft",
+        "question": "What food do you use to breed wolves in Minecraft?",
+        "choices": ["Steak", "Bones", "Any meat", "Apples"],
+        "answer": "Any meat",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What is the rarest ore in vanilla Minecraft?",
+        "choices": ["Diamond", "Emerald", "Ancient Debris", "Lapis Lazuli"],
+        "answer": "Ancient Debris",
+    },
+    {
+        "category": "Minecraft",
+        "question": "How many blocks of iron do you need to build an iron golem?",
+        "choices": ["3", "4", "5", "6"],
+        "answer": "4",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What do you need to craft a cake in Minecraft?",
+        "choices": ["Eggs, sugar, wheat, milk", "Eggs, cocoa, wheat", "Sugar, wheat, apples", "Milk, sugar, pumpkin"],
+        "answer": "Eggs, sugar, wheat, milk",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What happens when lightning strikes a pig in Minecraft?",
+        "choices": ["It dies", "It becomes a Zombified Piglin", "Nothing", "It catches fire"],
+        "answer": "It becomes a Zombified Piglin",
+    },
+    {
+        "category": "Minecraft",
+        "question": "What enchantment lets you walk on water by turning it to ice?",
+        "choices": ["Aqua Affinity", "Depth Strider", "Frost Walker", "Water Walking"],
+        "answer": "Frost Walker",
+    },
+    # ── More Roblox ──
+    {
+        "category": "Roblox",
+        "question": "What is the name of the default Roblox character?",
+        "choices": ["Builderman", "Noob", "Bacon Hair", "Pal"],
+        "answer": "Noob",
+    },
+    {
+        "category": "Roblox",
+        "question": "Which popular Roblox game has players adopt and raise virtual pets?",
+        "choices": ["Brookhaven", "Adopt Me", "MeepCity", "Bloxburg"],
+        "answer": "Adopt Me",
+    },
+    {
+        "category": "Roblox",
+        "question": "In Roblox, what is a 'Gamepass'?",
+        "choices": ["A free trial", "A purchasable in-game perk", "A cheat code", "A type of badge"],
+        "answer": "A purchasable in-game perk",
+    },
+    {
+        "category": "Roblox",
+        "question": "Which Roblox game is a life simulation set in a neighborhood?",
+        "choices": ["Jailbreak", "Bloxburg", "Tower of Hell", "Natural Disaster Survival"],
+        "answer": "Bloxburg",
+    },
+    {
+        "category": "Roblox",
+        "question": "What Roblox game requires you to climb an increasingly difficult tower with no checkpoints?",
+        "choices": ["Tower of Hell", "Obby King", "Mega Tower", "Climb the Stairs"],
+        "answer": "Tower of Hell",
+    },
+    {
+        "category": "Roblox",
+        "question": "In Roblox Jailbreak, what are the two main teams?",
+        "choices": ["Cops and Robbers", "Prisoners and Police", "Heroes and Villains", "Guards and Inmates"],
+        "answer": "Prisoners and Police",
+    },
+    # ── More Picture Round ──
+    {
+        "category": "Picture Round",
+        "question": "What animal is this?",
+        "image": {"type": "emoji", "content": "\U0001F427"},
+        "choices": ["Puffin", "Penguin", "Seagull", "Pelican"],
+        "answer": "Penguin",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What is this food?",
+        "image": {"type": "emoji", "content": "\U0001F355"},
+        "choices": ["Pie", "Pizza", "Flatbread", "Quesadilla"],
+        "answer": "Pizza",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What sport uses this?",
+        "image": {"type": "emoji", "content": "\U0001F3C8"},
+        "choices": ["Rugby", "American Football", "Soccer", "Cricket"],
+        "answer": "American Football",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What animal is this?",
+        "image": {"type": "emoji", "content": "\U0001F989"},
+        "choices": ["Eagle", "Hawk", "Owl", "Falcon"],
+        "answer": "Owl",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What is this?",
+        "image": {"type": "emoji", "content": "\U0001F30B"},
+        "choices": ["Mountain", "Volcano", "Island", "Geyser"],
+        "answer": "Volcano",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What animal is this?",
+        "image": {"type": "emoji", "content": "\U0001F40A"},
+        "choices": ["Alligator", "Lizard", "Crocodile", "Komodo Dragon"],
+        "answer": "Crocodile",
+    },
+    {
+        "category": "Picture Round",
+        "question": "What instrument is this?",
+        "image": {"type": "emoji", "content": "\U0001F3B8"},
+        "choices": ["Ukulele", "Banjo", "Guitar", "Bass"],
+        "answer": "Guitar",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/kr.png", "alt": "A country flag"},
+        "choices": ["Japan", "North Korea", "South Korea", "Taiwan"],
+        "answer": "South Korea",
+    },
+    {
+        "category": "Picture Round",
+        "question": "Which country does this flag belong to?",
+        "image": {"type": "url", "src": "https://flagcdn.com/w320/it.png", "alt": "A country flag"},
+        "choices": ["Ireland", "Italy", "Mexico", "Hungary"],
+        "answer": "Italy",
+    },
+]
+
+TOTAL_ROUNDS = 10
+POINTS_CORRECT = 10
+POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
+
+# ── Game State ───────────────────────────────────────────────────────────────
+
+games = {}       # game_id -> game dict
+waiting = None   # game_id of a game waiting for player 2
+game_lock = threading.Lock()  # protects games/waiting from concurrent access
+STALE_TIMEOUT = 30  # seconds before a waiting game is considered abandoned
+recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
+
+
+def new_game():
+    game_id = str(uuid.uuid4())[:8]
+    # Exclude questions used in the last 2 games
+    excluded = set()
+    for s in recent_question_indices:
+        excluded |= s
+    eligible = [(i, q) for i, q in enumerate(QUESTIONS) if i not in excluded]
+    if len(eligible) < TOTAL_ROUNDS:
+        eligible = list(enumerate(QUESTIONS))  # fallback: use all
+    chosen = random.sample(eligible, min(TOTAL_ROUNDS, len(eligible)))
+    recent_question_indices.append({i for i, q in chosen})
+    questions = [q for i, q in chosen]
+    # Shuffle choices for each question
+    for q in questions:
+        paired = list(zip(q["choices"], [c == q["answer"] for c in q["choices"]]))
+        random.shuffle(paired)
+        q["choices"] = [p[0] for p in paired]
+        q["answer"] = next(p[0] for p in paired if p[1])
+    game = {
+        "id": game_id,
+        "players": {},          # player_id -> {name, score}
+        "player_order": [],     # [player_id, player_id]
+        "questions": questions,
+        "round": 0,
+        "round_start": None,
+        "answers": {},          # round -> {player_id: {choice, time, correct}}
+        "ready": {},             # player_id -> True for players who clicked Begin
+        "state": "waiting",     # waiting | lobby | active | round_result | finished
+        "result_shown_at": None,
+        "round_results": [],    # list of per-round summaries
+        "last_poll": {},        # player_id -> timestamp of last poll
+        "created_at": time.time(),
+    }
+    games[game_id] = game
+    return game
+
+
+def is_waiting_game_stale(game):
+    """Check if a waiting game's only player has stopped polling."""
+    if game["state"] != "waiting":
+        return False
+    if not game["player_order"]:
+        return True
+    pid = game["player_order"][0]
+    last = game["last_poll"].get(pid, game["created_at"])
+    return time.time() - last > STALE_TIMEOUT
+
+
+def get_safe_state(game, player_id):
+    """Return game state safe to send to a specific player."""
+    g = game
+    p = g["players"].get(player_id, {})
+    opponent_id = None
+    for pid in g["player_order"]:
+        if pid != player_id:
+            opponent_id = pid
+
+    opponent = g["players"].get(opponent_id, {}) if opponent_id else {}
+
+    state = {
+        "game_id": g["id"],
+        "state": g["state"],
+        "round": g["round"] + 1,
+        "total_rounds": TOTAL_ROUNDS,
+        "your_name": p.get("name", ""),
+        "your_score": p.get("score", 0),
+        "opponent_name": opponent.get("name", "Waiting..."),
+        "opponent_score": opponent.get("score", 0),
+        "round_results": g["round_results"],
+    }
+
+    if g["state"] == "lobby":
+        state["your_ready"] = player_id in g["ready"]
+        state["opponent_ready"] = opponent_id in g["ready"] if opponent_id else False
+
+    if g["state"] == "active":
+        q = g["questions"][g["round"]]
+        state["question"] = {
+            "category": q["category"],
+            "text": q["question"],
+            "choices": q["choices"],
+        }
+        if "image" in q:
+            state["question"]["image"] = q["image"]
+        # Has this player already answered this round?
+        rd_answers = g["answers"].get(g["round"], {})
+        if player_id in rd_answers:
+            state["already_answered"] = True
+            state["your_choice"] = rd_answers[player_id]["choice"]
+
+    if g["state"] == "round_result":
+        state["last_result"] = g["round_results"][-1] if g["round_results"] else None
+
+    if g["state"] == "finished":
+        if p.get("score", 0) > opponent.get("score", 0):
+            state["outcome"] = "win"
+        elif p.get("score", 0) < opponent.get("score", 0):
+            state["outcome"] = "lose"
+        else:
+            state["outcome"] = "tie"
+
+    return state
+
+
+def advance_round(game):
+    """Check if round is complete and advance."""
+    rd = game["round"]
+    rd_answers = game["answers"].get(rd, {})
+
+    if len(rd_answers) < 2:
+        return  # still waiting for both players
+
+    q = game["questions"][rd]
+    correct_answer = q["answer"]
+
+    # Determine who answered first
+    times = [(pid, a["time"]) for pid, a in rd_answers.items()]
+    times.sort(key=lambda x: x[1])
+    first_pid = times[0][0]
+
+    result = {"round": rd + 1, "category": q["category"], "question": q["question"],
+              "correct_answer": correct_answer, "players": {}}
+
+    for pid, a in rd_answers.items():
+        is_correct = a["choice"] == correct_answer
+        points = 0
+        if is_correct:
+            points += POINTS_CORRECT
+            if pid == first_pid:
+                points += POINTS_SPEED_BONUS
+        game["players"][pid]["score"] += points
+        pname = game["players"][pid]["name"]
+        result["players"][pname] = {
+            "choice": a["choice"],
+            "correct": is_correct,
+            "points": points,
+            "was_first": pid == first_pid,
+        }
+
+    game["round_results"].append(result)
+    game["state"] = "round_result"
+    game["result_shown_at"] = time.time()
+
+    # After a short display period the client will request next round
+    if rd + 1 >= TOTAL_ROUNDS:
+        game["state"] = "finished"
+    else:
+        game["round"] += 1
+
+
+def next_round_if_ready(game):
+    """Move from round_result to active if enough time has passed."""
+    if game["state"] == "round_result" and game["result_shown_at"]:
+        if time.time() - game["result_shown_at"] > 2:
+            game["state"] = "active"
+            game["round_start"] = time.time()
+
+
+# ── HTTP Server ──────────────────────────────────────────────────────────────
+
+PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
+
+
+class GameHandler(http.server.BaseHTTPRequestHandler):
+
+    def log_message(self, fmt, *args):
+        # Quieter logging
+        pass
+
+    def _cors(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def _json_response(self, data, status=200):
+        body = json.dumps(data).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self._cors()
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_file(self, filepath, content_type):
+        try:
+            with open(filepath, "rb") as f:
+                content = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self._cors()
+            self.end_headers()
+            self.wfile.write(content)
+        except FileNotFoundError:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
+        if path == "/" or path == "/index.html":
+            self._serve_file(os.path.join(PUBLIC_DIR, "index.html"), "text/html; charset=utf-8")
+            return
+
+        if path == "/api/state":
+            params = urllib.parse.parse_qs(parsed.query)
+            game_id = params.get("game_id", [None])[0]
+            player_id = params.get("player_id", [None])[0]
+            if not game_id or not player_id or game_id not in games:
+                self._json_response({"error": "Invalid game or player"}, 400)
+                return
+            with game_lock:
+                game = games[game_id]
+                game["last_poll"][player_id] = time.time()
+                next_round_if_ready(game)
+                self._json_response(get_safe_state(game, player_id))
+            return
+
+        # Serve static files
+        safe = path.lstrip("/")
+        filepath = os.path.join(PUBLIC_DIR, safe)
+        if os.path.isfile(filepath):
+            ct = "text/html"
+            if filepath.endswith(".js"):
+                ct = "application/javascript"
+            elif filepath.endswith(".css"):
+                ct = "text/css"
+            self._serve_file(filepath, ct)
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
+    def do_POST(self):
+        global waiting
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
+        content_len = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_len) if content_len else b"{}"
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            data = {}
+
+        if path == "/api/join":
+            name = data.get("name", "Player")[:20].strip() or "Player"
+            player_id = str(uuid.uuid4())[:8]
+
+            with game_lock:
+                # Clean up stale waiting game
+                if waiting and waiting in games and is_waiting_game_stale(games[waiting]):
+                    del games[waiting]
+                    waiting = None
+
+                # Try to join an existing waiting game
+                if waiting and waiting in games and games[waiting]["state"] == "waiting":
+                    game = games[waiting]
+                    game["players"][player_id] = {"name": name, "score": 0}
+                    game["player_order"].append(player_id)
+                    game["state"] = "lobby"
+                    resp_game_id = waiting
+                    waiting = None
+                    self._json_response({"game_id": resp_game_id, "player_id": player_id})
+                else:
+                    # Create a new game and wait
+                    game = new_game()
+                    game["players"][player_id] = {"name": name, "score": 0}
+                    game["player_order"].append(player_id)
+                    waiting = game["id"]
+                    self._json_response({"game_id": game["id"], "player_id": player_id})
+            return
+
+        if path == "/api/rejoin":
+            # Allow a client to reconnect to an existing game
+            game_id = data.get("game_id")
+            player_id = data.get("player_id")
+            if game_id and player_id and game_id in games:
+                game = games[game_id]
+                if player_id in game["players"] and game["state"] != "finished":
+                    game["last_poll"][player_id] = time.time()
+                    self._json_response({"ok": True, "game_id": game_id, "player_id": player_id})
+                    return
+            self._json_response({"error": "Game not found or ended"}, 404)
+            return
+
+        if path == "/api/ready":
+            game_id = data.get("game_id")
+            player_id = data.get("player_id")
+            if not game_id or not player_id or game_id not in games:
+                self._json_response({"error": "Invalid game"}, 400)
+                return
+
+            with game_lock:
+                game = games[game_id]
+                if game["state"] != "lobby":
+                    self._json_response({"error": "Not in lobby"}, 400)
+                    return
+                game["ready"][player_id] = True
+                if len(game["ready"]) == 2:
+                    game["state"] = "active"
+                    game["round_start"] = time.time()
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/answer":
+            game_id = data.get("game_id")
+            player_id = data.get("player_id")
+            choice = data.get("choice")
+
+            if not game_id or not player_id or game_id not in games:
+                self._json_response({"error": "Invalid game"}, 400)
+                return
+
+            with game_lock:
+                game = games[game_id]
+                if game["state"] != "active":
+                    self._json_response({"error": "Not in active round"}, 400)
+                    return
+
+                rd = game["round"]
+                if rd not in game["answers"]:
+                    game["answers"][rd] = {}
+
+                if player_id in game["answers"][rd]:
+                    self._json_response({"error": "Already answered"}, 400)
+                    return
+
+                game["answers"][rd][player_id] = {
+                    "choice": choice,
+                    "time": time.time(),
+                    "correct": choice == game["questions"][rd]["answer"],
+                }
+
+                advance_round(game)
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/next":
+            # Client signals ready for next round
+            game_id = data.get("game_id")
+            if game_id and game_id in games:
+                with game_lock:
+                    game = games[game_id]
+                    next_round_if_ready(game)
+            self._json_response({"ok": True})
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
+
+def run(port=8080):
+    server = http.server.ThreadingHTTPServer(("0.0.0.0", port), GameHandler)
+    print(f"=== Brain Duel Server ===")
+    print(f"Game running at: http://localhost:{port}")
+    print(f"Share your IP address for remote play (port {port})")
+    print(f"Press Ctrl+C to stop.\n")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+        server.server_close()
+
+
+if __name__ == "__main__":
+    run(port=int(os.environ.get("PORT", 8080)))

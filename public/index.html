@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brain Duel</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --accent: #3b82f6;
+    --accent2: #8b5cf6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: var(--muted); margin-bottom: 30px; font-size: 1.1rem; }
+  .container { max-width: 600px; width: 100%; }
+
+  /* ── Screens ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Join Screen ── */
+  .join-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+  }
+  .join-box input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #334155;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .join-box input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 14px 32px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    color: white;
+  }
+  .btn:hover { transform: scale(1.03); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .btn-green { background: var(--green); }
+
+  /* ── Waiting ── */
+  .waiting-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+  }
+  .spinner {
+    display: inline-block;
+    width: 40px; height: 40px;
+    border: 4px solid #334155;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Lobby ── */
+  .lobby-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+  }
+  .lobby-players {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    margin: 24px 0;
+  }
+  .lobby-player {
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: 12px 24px;
+    background: var(--bg);
+    border-radius: 12px;
+  }
+  .lobby-player.you { color: var(--accent); }
+  .lobby-player.opp { color: var(--accent2); }
+  .lobby-vs {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .lobby-status {
+    color: var(--muted);
+    margin-top: 20px;
+    font-size: 0.95rem;
+    min-height: 1.4em;
+  }
+
+  /* ── Scoreboard ── */
+  .scoreboard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 20px;
+  }
+  .player-score {
+    text-align: center;
+  }
+  .player-score .name {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .player-score .score {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+  .player-score.you .score { color: var(--accent); }
+  .player-score.opp .score { color: var(--accent2); }
+  .round-info {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .round-info .round-num {
+    font-size: 1.4rem;
+    color: var(--text);
+    display: block;
+    font-weight: 700;
+  }
+
+  /* ── Question ── */
+  .question-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+  }
+  .category-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .question-image {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .question-image img {
+    max-width: 280px;
+    max-height: 200px;
+    border-radius: 12px;
+    object-fit: contain;
+  }
+  .emoji-image {
+    font-size: 4rem;
+    line-height: 1.2;
+  }
+  .question-text {
+    font-size: 1.3rem;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .choice-btn {
+    padding: 16px;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .choice-btn:hover { border-color: var(--accent); background: #1a2744; }
+  .choice-btn.selected {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.15);
+    pointer-events: none;
+  }
+  .choice-btn:disabled { pointer-events: none; opacity: 0.6; }
+  .waiting-opponent {
+    text-align: center;
+    color: var(--muted);
+    margin-top: 16px;
+    font-style: italic;
+  }
+
+  /* ── Round Result ── */
+  .result-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  .result-icon { font-size: 3rem; margin-bottom: 12px; }
+  .result-detail {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 12px 0;
+    text-align: left;
+  }
+  .result-detail .player-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    align-items: center;
+  }
+  .result-detail .pts { font-weight: 700; }
+  .pts.positive { color: var(--green); }
+  .pts.zero { color: var(--red); }
+  .correct-label { color: var(--green); font-size: 0.85rem; }
+  .wrong-label { color: var(--red); font-size: 0.85rem; }
+  .speed-label { color: var(--yellow); font-size: 0.8rem; }
+
+  /* ── Game Over ── */
+  .gameover-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+  }
+  .gameover-box h2 { font-size: 2rem; margin-bottom: 8px; }
+  .final-scores {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 24px 0;
+  }
+  .final-score-card {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 20px 32px;
+    text-align: center;
+  }
+  .final-score-card .fs-name { color: var(--muted); margin-bottom: 4px; }
+  .final-score-card .fs-score { font-size: 2.2rem; font-weight: 700; }
+  .win-text { color: var(--green); }
+  .lose-text { color: var(--red); }
+  .tie-text { color: var(--yellow); }
+
+  /* ── History ── */
+  .history { margin-top: 20px; }
+  .history h3 { margin-bottom: 10px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+  .history-round {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+  }
+  .history-round .hr-q { color: var(--muted); flex: 1; margin-right: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: 500px) {
+    h1 { font-size: 1.8rem; }
+    .choices { grid-template-columns: 1fr; }
+    .final-scores { flex-direction: column; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+  <h1>Brain Duel</h1>
+  <p class="subtitle">Outsmart your opponent!</p>
+
+  <div class="container">
+
+    <!-- JOIN SCREEN -->
+    <div id="screen-join" class="screen active">
+      <div class="join-box">
+        <h2 style="margin-bottom:8px;">Enter the Arena</h2>
+        <p style="color:var(--muted);margin-bottom:24px;">Pick a name and find an opponent</p>
+        <input type="text" id="name-input" placeholder="Your name..." maxlength="20" autofocus>
+        <br>
+        <button class="btn btn-primary" id="join-btn" onclick="joinGame()">Find Opponent</button>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <p style="color:var(--muted);font-size:0.85rem;">
+          10 rounds &middot; Math, Logic, Words, Trivia &amp; Picture Rounds<br>
+          Answer fast for bonus points!
+        </p>
+      </div>
+    </div>
+
+    <!-- WAITING SCREEN -->
+    <div id="screen-waiting" class="screen">
+      <div class="waiting-box">
+        <div class="spinner"></div>
+        <h2>Waiting for opponent...</h2>
+        <p style="color:var(--muted);margin-top:12px;">Share this link with your friend:</p>
+        <p id="share-link" style="color:var(--accent);word-break:break-all;margin-top:8px;font-size:0.95rem;"></p>
+      </div>
+    </div>
+
+    <!-- LOBBY SCREEN -->
+    <div id="screen-lobby" class="screen">
+      <div class="lobby-box">
+        <h2 style="margin-bottom:4px;">Get Ready!</h2>
+        <p style="color:var(--muted);margin-bottom:8px;">Both players must confirm to start</p>
+        <div class="lobby-players">
+          <div class="lobby-player you" id="lobby-you">You</div>
+          <div class="lobby-vs">VS</div>
+          <div class="lobby-player opp" id="lobby-opp">Opponent</div>
+        </div>
+        <button class="btn btn-green" id="lobby-begin-btn" onclick="readyUp()">Begin</button>
+        <div class="lobby-status" id="lobby-status">Click Begin when you're ready!</div>
+      </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="screen-game" class="screen">
+      <div class="scoreboard">
+        <div class="player-score you">
+          <div class="name" id="your-name">You</div>
+          <div class="score" id="your-score">0</div>
+        </div>
+        <div class="round-info">
+          <span class="round-num" id="round-display">1/10</span>
+          Round
+        </div>
+        <div class="player-score opp">
+          <div class="name" id="opp-name">Opponent</div>
+          <div class="score" id="opp-score">0</div>
+        </div>
+      </div>
+      <div class="question-box" id="question-box">
+        <div class="category-badge" id="q-category">Math</div>
+        <div class="question-image" id="q-image" style="display:none;"></div>
+        <div class="question-text" id="q-text">Loading...</div>
+        <div class="choices" id="q-choices"></div>
+        <div class="waiting-opponent" id="waiting-answer" style="display:none;">
+          Waiting for opponent to answer...
+        </div>
+      </div>
+    </div>
+
+    <!-- ROUND RESULT SCREEN -->
+    <div id="screen-result" class="screen">
+      <div class="scoreboard">
+        <div class="player-score you">
+          <div class="name" id="res-your-name">You</div>
+          <div class="score" id="res-your-score">0</div>
+        </div>
+        <div class="round-info">
+          <span class="round-num" id="res-round-display">1/10</span>
+          Round
+        </div>
+        <div class="player-score opp">
+          <div class="name" id="res-opp-name">Opponent</div>
+          <div class="score" id="res-opp-score">0</div>
+        </div>
+      </div>
+      <div class="result-box">
+        <div class="result-icon" id="result-icon"></div>
+        <h2 id="result-title">Round Results</h2>
+        <p style="color:var(--muted);margin-top:4px;" id="result-correct-answer"></p>
+        <div class="result-detail" id="result-detail"></div>
+        <p style="color:var(--muted);margin-top:12px;font-size:0.9rem;">Next round starting...</p>
+      </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="screen-gameover" class="screen">
+      <div class="gameover-box">
+        <div id="go-icon" style="font-size:3.5rem;margin-bottom:8px;"></div>
+        <h2 id="go-title">Game Over</h2>
+        <p id="go-subtitle" style="color:var(--muted);margin-top:4px;"></p>
+        <div class="final-scores">
+          <div class="final-score-card">
+            <div class="fs-name" id="go-your-name">You</div>
+            <div class="fs-score" id="go-your-score" style="color:var(--accent);">0</div>
+          </div>
+          <div class="final-score-card">
+            <div class="fs-name" id="go-opp-name">Opponent</div>
+            <div class="fs-score" id="go-opp-score" style="color:var(--accent2);">0</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
+        <div class="history" id="go-history"></div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  let gameId = null;
+  let playerId = null;
+  let pollTimer = null;
+  let currentScreen = 'join';
+  let lastState = null;
+  let pollInterval = 1000;
+
+  const $ = id => document.getElementById(id);
+
+  // Headers needed to bypass ngrok's free-tier browser warning on API calls
+  const API_HEADERS = {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+  };
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $('screen-' + name).classList.add('active');
+    currentScreen = name;
+  }
+
+  function saveSession() {
+    if (gameId && playerId) {
+      sessionStorage.setItem('brain_duel_game', JSON.stringify({ gameId, playerId }));
+    }
+  }
+
+  function clearSession() {
+    sessionStorage.removeItem('brain_duel_game');
+  }
+
+  // Try to reconnect on page load
+  (function tryReconnect() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('brain_duel_game'));
+      if (saved && saved.gameId && saved.playerId) {
+        fetch('/api/rejoin', {
+          method: 'POST',
+          headers: API_HEADERS,
+          body: JSON.stringify({ game_id: saved.gameId, player_id: saved.playerId }),
+        }).then(r => r.json()).then(data => {
+          if (data.ok) {
+            gameId = saved.gameId;
+            playerId = saved.playerId;
+            showScreen('waiting');
+            startPolling();
+          } else {
+            clearSession();
+          }
+        }).catch(() => clearSession());
+      }
+    } catch (e) { clearSession(); }
+  })();
+
+  // Allow Enter key to join
+  $('name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') joinGame();
+  });
+
+  async function joinGame() {
+    const name = $('name-input').value.trim() || 'Player';
+    $('join-btn').disabled = true;
+    $('join-btn').textContent = 'Joining...';
+
+    try {
+      const res = await fetch('/api/join', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      gameId = data.game_id;
+      playerId = data.player_id;
+      saveSession();
+
+      $('share-link').textContent = window.location.origin;
+      showScreen('waiting');
+      startPolling();
+    } catch (err) {
+      alert('Could not connect to server. Is it running?');
+      $('join-btn').disabled = false;
+      $('join-btn').textContent = 'Find Opponent';
+    }
+  }
+
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    // Poll faster while waiting for opponent
+    pollInterval = 500;
+    pollTimer = setInterval(pollState, pollInterval);
+    pollState();
+  }
+
+  async function pollState() {
+    if (!gameId || !playerId) return;
+    try {
+      const res = await fetch(`/api/state?game_id=${gameId}&player_id=${playerId}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      });
+      const state = await res.json();
+      if (state.error) return;
+      lastState = state;
+      render(state);
+    } catch (e) {
+      // Network hiccup, keep polling
+    }
+  }
+
+  function render(s) {
+    // Adjust poll speed: fast while waiting/lobby, normal during gameplay
+    const desiredInterval = (s.state === 'waiting' || s.state === 'lobby') ? 500 : 1000;
+    if (pollInterval !== desiredInterval) {
+      pollInterval = desiredInterval;
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = setInterval(pollState, pollInterval); }
+    }
+
+    if (s.state === 'waiting') {
+      if (currentScreen !== 'waiting') showScreen('waiting');
+      return;
+    }
+
+    if (s.state === 'lobby') {
+      showScreen('lobby');
+      $('lobby-you').textContent = s.your_name;
+      $('lobby-opp').textContent = s.opponent_name;
+      const btn = $('lobby-begin-btn');
+      if (s.your_ready) {
+        btn.disabled = true;
+        btn.textContent = 'Ready!';
+        $('lobby-status').textContent = 'Waiting for ' + s.opponent_name + ' to confirm...';
+      } else if (s.opponent_ready) {
+        btn.disabled = false;
+        btn.textContent = 'Begin';
+        $('lobby-status').textContent = s.opponent_name + ' is ready! Click Begin to start!';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Begin';
+        $('lobby-status').textContent = "Click Begin when you're ready!";
+      }
+      return;
+    }
+
+    if (s.state === 'active') {
+      showScreen('game');
+      $('your-name').textContent = s.your_name;
+      $('your-score').textContent = s.your_score;
+      $('opp-name').textContent = s.opponent_name;
+      $('opp-score').textContent = s.opponent_score;
+      $('round-display').textContent = s.round + '/' + s.total_rounds;
+
+      if (s.question) {
+        $('q-category').textContent = s.question.category;
+        $('q-text').textContent = s.question.text;
+
+        // Render image if present
+        const imgEl = $('q-image');
+        if (s.question.image) {
+          imgEl.style.display = 'block';
+          if (s.question.image.type === 'emoji') {
+            imgEl.innerHTML = '<div class="emoji-image">' + s.question.image.content + '</div>';
+          } else if (s.question.image.type === 'url') {
+            imgEl.innerHTML = '<img src="' + s.question.image.src + '" alt="' + (s.question.image.alt || '') + '" loading="eager">';
+          }
+        } else {
+          imgEl.style.display = 'none';
+          imgEl.innerHTML = '';
+        }
+
+        const box = $('q-choices');
+        // Only rebuild if question changed
+        if (box.dataset.round !== String(s.round)) {
+          box.dataset.round = s.round;
+          box.innerHTML = '';
+          s.question.choices.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = c;
+            btn.onclick = () => submitAnswer(c, btn);
+            box.appendChild(btn);
+          });
+        }
+
+        if (s.already_answered) {
+          document.querySelectorAll('.choice-btn').forEach(btn => {
+            btn.disabled = true;
+            if (btn.textContent === s.your_choice) btn.classList.add('selected');
+          });
+          $('waiting-answer').style.display = 'block';
+        } else {
+          $('waiting-answer').style.display = 'none';
+        }
+      }
+      return;
+    }
+
+    if (s.state === 'round_result') {
+      showScreen('result');
+      $('res-your-name').textContent = s.your_name;
+      $('res-your-score').textContent = s.your_score;
+      $('res-opp-name').textContent = s.opponent_name;
+      $('res-opp-score').textContent = s.opponent_score;
+      $('res-round-display').textContent = s.round + '/' + s.total_rounds;
+
+      if (s.last_result) {
+        const lr = s.last_result;
+        $('result-correct-answer').textContent = 'Correct answer: ' + lr.correct_answer;
+
+        const myRes = lr.players[s.your_name];
+        const oppRes = lr.players[s.opponent_name];
+
+        let icon = '';
+        let title = '';
+        if (myRes && myRes.correct && (!oppRes || !oppRes.correct)) {
+          icon = '&#9733;'; title = 'You nailed it!';
+        } else if (myRes && !myRes.correct && oppRes && oppRes.correct) {
+          icon = '&#10060;'; title = 'Opponent got it!';
+        } else if (myRes && myRes.correct && oppRes && oppRes.correct) {
+          icon = '&#9889;'; title = 'Both correct!';
+        } else {
+          icon = '&#128528;'; title = 'Nobody got it!';
+        }
+        $('result-icon').innerHTML = icon;
+        $('result-title').textContent = title;
+
+        let html = '';
+        if (myRes) {
+          html += renderPlayerResult(s.your_name, myRes);
+        }
+        if (oppRes) {
+          html += renderPlayerResult(s.opponent_name, oppRes);
+        }
+        $('result-detail').innerHTML = html;
+      }
+      return;
+    }
+
+    if (s.state === 'finished') {
+      showScreen('gameover');
+      clearSession();
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+
+      $('go-your-name').textContent = s.your_name;
+      $('go-your-score').textContent = s.your_score;
+      $('go-opp-name').textContent = s.opponent_name;
+      $('go-opp-score').textContent = s.opponent_score;
+
+      if (s.outcome === 'win') {
+        $('go-icon').innerHTML = '&#127942;';
+        $('go-title').innerHTML = '<span class="win-text">You Win!</span>';
+        $('go-subtitle').textContent = 'Congratulations, champion!';
+      } else if (s.outcome === 'lose') {
+        $('go-icon').innerHTML = '&#128170;';
+        $('go-title').innerHTML = '<span class="lose-text">You Lost</span>';
+        $('go-subtitle').textContent = 'Good game! Try again?';
+      } else {
+        $('go-icon').innerHTML = '&#129309;';
+        $('go-title').innerHTML = '<span class="tie-text">It\'s a Tie!</span>';
+        $('go-subtitle').textContent = 'Evenly matched!';
+      }
+
+      // Show round history
+      if (s.round_results && s.round_results.length > 0) {
+        let hHtml = '<h3>Round History</h3>';
+        s.round_results.forEach(r => {
+          const my = r.players[s.your_name];
+          const opp = r.players[s.opponent_name];
+          const myPts = my ? '+' + my.points : '+0';
+          const oppPts = opp ? '+' + opp.points : '+0';
+          hHtml += `<div class="history-round">
+            <span class="hr-q">R${r.round}: ${r.category} - ${r.question}</span>
+            <span style="color:var(--accent);margin-right:8px;">${myPts}</span>
+            <span style="color:var(--accent2);">${oppPts}</span>
+          </div>`;
+        });
+        $('go-history').innerHTML = hHtml;
+      }
+      return;
+    }
+  }
+
+  function renderPlayerResult(name, res) {
+    const correctClass = res.correct ? 'correct-label' : 'wrong-label';
+    const correctText = res.correct ? 'Correct' : 'Wrong';
+    const ptsClass = res.points > 0 ? 'positive' : 'zero';
+    const speedBadge = res.was_first && res.correct ? ' <span class="speed-label">FASTEST</span>' : '';
+    return `<div class="player-line">
+      <span>${name}: "${res.choice}" <span class="${correctClass}">${correctText}</span>${speedBadge}</span>
+      <span class="pts ${ptsClass}">+${res.points}</span>
+    </div>`;
+  }
+
+  async function readyUp() {
+    $('lobby-begin-btn').disabled = true;
+    $('lobby-begin-btn').textContent = 'Ready!';
+    try {
+      await fetch('/api/ready', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ game_id: gameId, player_id: playerId }),
+      });
+    } catch (e) {
+      // Will sync on next poll
+    }
+  }
+
+  async function submitAnswer(choice, btn) {
+    document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+    btn.classList.add('selected');
+    $('waiting-answer').style.display = 'block';
+
+    try {
+      await fetch('/api/answer', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ game_id: gameId, player_id: playerId, choice }),
+      });
+    } catch (e) {
+      // Will sync on next poll
+    }
+  }
+</script>
+</body>
+</html>
