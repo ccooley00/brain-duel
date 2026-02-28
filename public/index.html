@@ -322,10 +322,17 @@
     <div id="screen-join" class="screen active">
       <div class="join-box">
         <h2 style="margin-bottom:8px;">Enter the Arena</h2>
-        <p style="color:var(--muted);margin-bottom:24px;">Pick a name and find an opponent</p>
+        <p style="color:var(--muted);margin-bottom:24px;">Pick a name and create or join a game</p>
         <input type="text" id="name-input" placeholder="Your name..." maxlength="20" autofocus>
-        <br>
-        <button class="btn btn-primary" id="join-btn" onclick="joinGame()">Find Opponent</button>
+        <div style="display:flex;gap:12px;margin-top:16px;">
+          <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="createGame()">Create Game</button>
+          <button class="btn btn-green" style="flex:1;" id="show-join-btn" onclick="showJoinCode()">Join Game</button>
+        </div>
+        <div id="join-code-section" style="display:none;margin-top:16px;">
+          <input type="text" id="code-input" placeholder="Enter room code..." maxlength="4" style="text-transform:uppercase;text-align:center;font-size:1.4rem;letter-spacing:6px;font-weight:700;">
+          <button class="btn btn-green" style="width:100;margin-top:8px;" id="join-btn" onclick="joinGame()">Join</button>
+          <p id="join-error" style="color:var(--red);margin-top:8px;display:none;"></p>
+        </div>
       </div>
       <div style="text-align:center;margin-top:20px;">
         <p style="color:var(--muted);font-size:0.85rem;">
@@ -340,8 +347,10 @@
       <div class="waiting-box">
         <div class="spinner"></div>
         <h2>Waiting for opponent...</h2>
-        <p style="color:var(--muted);margin-top:12px;">Share this link with your friend:</p>
-        <p id="share-link" style="color:var(--accent);word-break:break-all;margin-top:8px;font-size:0.95rem;"></p>
+        <p style="color:var(--muted);margin-top:12px;">Share this code with your friend:</p>
+        <p id="room-code-display" style="font-size:3rem;font-weight:700;letter-spacing:12px;color:var(--accent);margin:16px 0;"></p>
+        <button class="btn btn-primary" style="font-size:0.9rem;padding:10px 20px;" onclick="copyRoomCode()">Copy Code</button>
+        <p id="copy-confirm" style="color:var(--green);margin-top:8px;font-size:0.85rem;display:none;">Copied!</p>
       </div>
     </div>
 
@@ -490,15 +499,23 @@
     } catch (e) { clearSession(); }
   })();
 
-  // Allow Enter key to join
-  $('name-input').addEventListener('keydown', e => {
+  let roomCode = null;
+
+  function showJoinCode() {
+    const section = $('join-code-section');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    if (section.style.display === 'block') $('code-input').focus();
+  }
+
+  // Allow Enter key in code input
+  $('code-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') joinGame();
   });
 
-  async function joinGame() {
+  async function createGame() {
     const name = $('name-input').value.trim() || 'Player';
-    $('join-btn').disabled = true;
-    $('join-btn').textContent = 'Joining...';
+    $('create-btn').disabled = true;
+    $('create-btn').textContent = 'Creating...';
 
     try {
       const res = await fetch('/api/join', {
@@ -509,15 +526,63 @@
       const data = await res.json();
       gameId = data.game_id;
       playerId = data.player_id;
+      roomCode = data.room_code;
       saveSession();
 
-      $('share-link').textContent = window.location.origin;
+      $('room-code-display').textContent = roomCode;
+      showScreen('waiting');
+      startPolling();
+    } catch (err) {
+      alert('Could not connect to server. Is it running?');
+      $('create-btn').disabled = false;
+      $('create-btn').textContent = 'Create Game';
+    }
+  }
+
+  async function joinGame() {
+    const name = $('name-input').value.trim() || 'Player';
+    const code = $('code-input').value.trim().toUpperCase();
+    if (!code || code.length !== 4) {
+      $('join-error').textContent = 'Please enter a 4-letter code.';
+      $('join-error').style.display = 'block';
+      return;
+    }
+    $('join-btn').disabled = true;
+    $('join-btn').textContent = 'Joining...';
+    $('join-error').style.display = 'none';
+
+    try {
+      const res = await fetch('/api/join', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ name, room_code: code }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        $('join-error').textContent = data.error;
+        $('join-error').style.display = 'block';
+        $('join-btn').disabled = false;
+        $('join-btn').textContent = 'Join';
+        return;
+      }
+      gameId = data.game_id;
+      playerId = data.player_id;
+      saveSession();
+
       showScreen('waiting');
       startPolling();
     } catch (err) {
       alert('Could not connect to server. Is it running?');
       $('join-btn').disabled = false;
-      $('join-btn').textContent = 'Find Opponent';
+      $('join-btn').textContent = 'Join';
+    }
+  }
+
+  function copyRoomCode() {
+    if (roomCode) {
+      navigator.clipboard.writeText(roomCode);
+      $('copy-confirm').style.display = 'block';
+      setTimeout(() => $('copy-confirm').style.display = 'none', 2000);
     }
   }
 
@@ -554,6 +619,10 @@
 
     if (s.state === 'waiting') {
       if (currentScreen !== 'waiting') showScreen('waiting');
+      if (s.room_code) {
+        roomCode = s.room_code;
+        $('room-code-display').textContent = s.room_code;
+      }
       return;
     }
 

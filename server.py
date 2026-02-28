@@ -905,10 +905,18 @@ POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
 # ── Game State ───────────────────────────────────────────────────────────────
 
 games = {}       # game_id -> game dict
-waiting = None   # game_id of a game waiting for player 2
-game_lock = threading.Lock()  # protects games/waiting from concurrent access
+rooms = {}       # room_code -> game_id (for games waiting for player 2)
+game_lock = threading.Lock()  # protects games/rooms from concurrent access
 STALE_TIMEOUT = 30  # seconds before a waiting game is considered abandoned
 recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
+
+
+def generate_room_code():
+    """Generate a unique 4-letter room code."""
+    while True:
+        code = ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ', k=4))
+        if code not in rooms:
+            return code
 
 
 def new_game():
@@ -943,6 +951,7 @@ def new_game():
         "round_results": [],    # list of per-round summaries
         "last_poll": {},        # player_id -> timestamp of last poll
         "created_at": time.time(),
+        "room_code": None,      # set when game is created via room system
     }
     games[game_id] = game
     return game
@@ -957,6 +966,16 @@ def is_waiting_game_stale(game):
     pid = game["player_order"][0]
     last = game["last_poll"].get(pid, game["created_at"])
     return time.time() - last > STALE_TIMEOUT
+
+
+def cleanup_stale_rooms():
+    """Remove room codes for stale waiting games."""
+    stale_codes = [code for code, gid in rooms.items()
+                   if gid not in games or is_waiting_game_stale(games[gid])]
+    for code in stale_codes:
+        gid = rooms.pop(code, None)
+        if gid and gid in games:
+            del games[gid]
 
 
 def get_safe_state(game, player_id):
@@ -981,6 +1000,9 @@ def get_safe_state(game, player_id):
         "opponent_score": opponent.get("score", 0),
         "round_results": g["round_results"],
     }
+
+    if g["state"] == "waiting" and g.get("room_code"):
+        state["room_code"] = g["room_code"]
 
     if g["state"] == "lobby":
         state["your_ready"] = player_id in g["ready"]
@@ -1149,7 +1171,6 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        global waiting
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
@@ -1162,30 +1183,37 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
 
         if path == "/api/join":
             name = data.get("name", "Player")[:20].strip() or "Player"
+            room_code = data.get("room_code", "").strip().upper()
             player_id = str(uuid.uuid4())[:8]
 
             with game_lock:
-                # Clean up stale waiting game
-                if waiting and waiting in games and is_waiting_game_stale(games[waiting]):
-                    del games[waiting]
-                    waiting = None
+                cleanup_stale_rooms()
 
-                # Try to join an existing waiting game
-                if waiting and waiting in games and games[waiting]["state"] == "waiting":
-                    game = games[waiting]
+                if room_code:
+                    # Join an existing room
+                    if room_code not in rooms:
+                        self._json_response({"error": "Room not found. Check the code and try again."}, 404)
+                        return
+                    game_id = rooms[room_code]
+                    if game_id not in games or games[game_id]["state"] != "waiting":
+                        del rooms[room_code]
+                        self._json_response({"error": "Room is no longer available."}, 404)
+                        return
+                    game = games[game_id]
                     game["players"][player_id] = {"name": name, "score": 0}
                     game["player_order"].append(player_id)
                     game["state"] = "lobby"
-                    resp_game_id = waiting
-                    waiting = None
-                    self._json_response({"game_id": resp_game_id, "player_id": player_id})
+                    del rooms[room_code]
+                    self._json_response({"game_id": game_id, "player_id": player_id})
                 else:
-                    # Create a new game and wait
+                    # Create a new game with a room code
                     game = new_game()
+                    code = generate_room_code()
+                    game["room_code"] = code
                     game["players"][player_id] = {"name": name, "score": 0}
                     game["player_order"].append(player_id)
-                    waiting = game["id"]
-                    self._json_response({"game_id": game["id"], "player_id": player_id})
+                    rooms[code] = game["id"]
+                    self._json_response({"game_id": game["id"], "player_id": player_id, "room_code": code})
             return
 
         if path == "/api/rejoin":
