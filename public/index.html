@@ -322,8 +322,10 @@
     <div id="screen-join" class="screen active">
       <div class="join-box">
         <h2 style="margin-bottom:8px;">Enter the Arena</h2>
-        <p style="color:var(--muted);margin-bottom:24px;">Pick a name and create or join a game</p>
-        <input type="text" id="name-input" placeholder="Your name..." maxlength="20" autofocus>
+        <p style="color:var(--muted);margin-bottom:24px;">Enter your name, then create or join a game</p>
+        <label style="display:block;text-align:left;color:var(--muted);font-size:0.9rem;margin-bottom:6px;">Your Name</label>
+        <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autofocus>
+        <p id="name-error" style="color:var(--red);margin-top:4px;margin-bottom:4px;display:none;font-size:0.9rem;">Please enter your name first!</p>
         <div style="display:flex;gap:12px;margin-top:16px;">
           <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="createGame()">Create Game</button>
           <button class="btn btn-green" style="flex:1;" id="show-join-btn" onclick="showJoinCode()">Join Game</button>
@@ -507,13 +509,23 @@
     if (section.style.display === 'block') $('code-input').focus();
   }
 
+  $('name-input').addEventListener('input', () => {
+    $('name-error').style.display = 'none';
+  });
+
   // Allow Enter key in code input
   $('code-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') joinGame();
   });
 
   async function createGame() {
-    const name = $('name-input').value.trim() || 'Player';
+    const name = $('name-input').value.trim();
+    if (!name) {
+      $('name-error').style.display = 'block';
+      $('name-input').focus();
+      return;
+    }
+    $('name-error').style.display = 'none';
     $('create-btn').disabled = true;
     $('create-btn').textContent = 'Creating...';
 
@@ -540,7 +552,13 @@
   }
 
   async function joinGame() {
-    const name = $('name-input').value.trim() || 'Player';
+    const name = $('name-input').value.trim();
+    if (!name) {
+      $('name-error').style.display = 'block';
+      $('name-input').focus();
+      return;
+    }
+    $('name-error').style.display = 'none';
     const code = $('code-input').value.trim().toUpperCase();
     if (!code || code.length !== 4) {
       $('join-error').textContent = 'Please enter a 4-letter code.';
