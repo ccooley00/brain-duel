@@ -906,9 +906,28 @@ POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
 
 games = {}       # game_id -> game dict
 rooms = {}       # room_code -> game_id (for games waiting for player 2)
-leaderboard = [] # top 10 fastest total times [{name, total_time, score, date}]
 game_lock = threading.Lock()  # protects games/rooms from concurrent access
 STALE_TIMEOUT = 30  # seconds before a waiting game is considered abandoned
+
+LEADERBOARD_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leaderboard.json")
+
+
+def _load_leaderboard():
+    """Load leaderboard from disk."""
+    try:
+        with open(LEADERBOARD_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def _save_leaderboard(lb):
+    """Save leaderboard to disk."""
+    with open(LEADERBOARD_FILE, "w") as f:
+        json.dump(lb, f)
+
+
+leaderboard = _load_leaderboard()
 recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
 
 
@@ -1107,6 +1126,7 @@ def _update_leaderboard(game):
         leaderboard.append(entry)
     leaderboard.sort(key=lambda e: (-e["score"], e["total_time"]))
     del leaderboard[10:]  # keep only top 10
+    _save_leaderboard(leaderboard)
 
 
 def next_round_if_ready(game):
