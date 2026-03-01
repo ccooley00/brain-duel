@@ -10,11 +10,15 @@ import http.server
 import json
 import os
 import random
+import sys
 import threading
 import time
 import urllib.parse
 import urllib.request
 import uuid
+
+# Force unbuffered stdout so print() shows in Render logs immediately
+sys.stdout.reconfigure(line_buffering=True)
 
 # ── Question Banks ───────────────────────────────────────────────────────────
 
@@ -365,6 +369,27 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
             if mode not in QUESTION_BANKS:
                 mode = "fun"
             self._json_response(_load_leaderboard(mode))
+            return
+
+        if path == "/api/debug":
+            # Diagnostic endpoint to check Supabase connectivity
+            info = {
+                "supabase_url_set": bool(SUPABASE_URL),
+                "supabase_key_set": bool(SUPABASE_KEY),
+                "supabase_url_prefix": SUPABASE_URL[:30] + "..." if SUPABASE_URL else "",
+                "active_games": len(games),
+                "active_rooms": len(rooms),
+            }
+            # Try a test read
+            if SUPABASE_URL and SUPABASE_KEY:
+                try:
+                    url = f"{SUPABASE_URL}/rest/v1/leaderboard?select=name&limit=1"
+                    req = urllib.request.Request(url, headers=_supabase_headers())
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        info["supabase_read_test"] = "OK"
+                except Exception as e:
+                    info["supabase_read_test"] = f"FAILED: {e}"
+            self._json_response(info)
             return
 
         if path == "/api/state":
