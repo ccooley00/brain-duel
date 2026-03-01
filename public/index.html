@@ -671,8 +671,11 @@
 
   function showJoinCode() {
     const section = $('join-code-section');
-    section.style.display = section.style.display === 'none' ? 'block' : 'none';
-    if (section.style.display === 'block') $('code-input').focus();
+    const modeSelector = document.querySelector('.mode-selector');
+    const isShowing = section.style.display === 'none';
+    section.style.display = isShowing ? 'block' : 'none';
+    modeSelector.style.display = isShowing ? 'none' : 'block';
+    if (isShowing) $('code-input').focus();
   }
 
   $('name-input').addEventListener('input', () => {
