@@ -448,14 +448,35 @@
             <option value="cooleys">History of Cooleys</option>
           </select>
         </div>
-        <div style="display:flex;gap:12px;margin-top:16px;">
-          <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="createGame()">Create Game</button>
-          <button class="btn btn-green" style="flex:1;" id="show-join-btn" onclick="showJoinCode()">Join Game</button>
+        <!-- Step 1: Choose opponent type -->
+        <div id="opponent-step1" style="display:flex;gap:12px;margin-top:16px;">
+          <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="showComputerPicker()">Super Computer</button>
+          <button class="btn btn-primary" style="flex:1;" onclick="showHumanOptions()">Another Player</button>
         </div>
-        <div id="join-code-section" style="display:none;margin-top:16px;">
-          <input type="text" id="code-input" placeholder="Enter room code..." maxlength="4" style="text-transform:uppercase;text-align:center;font-size:1.4rem;letter-spacing:6px;font-weight:700;">
-          <button class="btn btn-green" style="width:100;margin-top:8px;" id="join-btn" onclick="joinGame()">Join</button>
-          <p id="join-error" style="color:var(--red);margin-top:8px;display:none;"></p>
+
+        <!-- Step 2a: Computer opponent picker -->
+        <div id="opponent-computer" style="display:none;margin-top:16px;">
+          <p style="color:var(--muted);margin-bottom:12px;">Choose your opponent:</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn" style="background:linear-gradient(135deg,#dc2626,#991b1b);font-size:1.15rem;" onclick="createComputerGame('hal')">HAL 9000</button>
+            <button class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);font-size:1.15rem;" onclick="createComputerGame('terminator')">Terminator</button>
+            <button class="btn" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);font-size:1.15rem;" onclick="createComputerGame('claude')">Claude</button>
+          </div>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="showStep1()">Back</button>
+        </div>
+
+        <!-- Step 2b: Human multiplayer options -->
+        <div id="opponent-human" style="display:none;margin-top:16px;">
+          <div style="display:flex;gap:12px;">
+            <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="createGame()">Create Game</button>
+            <button class="btn btn-green" style="flex:1;" id="show-join-btn" onclick="showJoinCode()">Join Game</button>
+          </div>
+          <div id="join-code-section" style="display:none;margin-top:16px;">
+            <input type="text" id="code-input" placeholder="Enter room code..." maxlength="4" style="text-transform:uppercase;text-align:center;font-size:1.4rem;letter-spacing:6px;font-weight:700;">
+            <button class="btn btn-green" style="width:100;margin-top:8px;" id="join-btn" onclick="joinGame()">Join</button>
+            <p id="join-error" style="color:var(--red);margin-top:8px;display:none;"></p>
+          </div>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="showStep1()">Back</button>
         </div>
       </div>
       <div style="text-align:center;margin-top:20px;">
@@ -601,6 +622,7 @@
   let lastState = null;
   let pollInterval = 1000;
   let gameMode = 'fun';
+  let isComputerGame = false;
 
   const MODE_NAMES = {
     fun: 'Fun',
@@ -668,6 +690,53 @@
   })();
 
   let roomCode = null;
+
+  function showStep1() {
+    $('opponent-step1').style.display = 'flex';
+    $('opponent-computer').style.display = 'none';
+    $('opponent-human').style.display = 'none';
+    document.querySelector('.mode-selector').style.display = 'block';
+    $('join-code-section').style.display = 'none';
+  }
+
+  function showComputerPicker() {
+    const name = $('name-input').value.trim();
+    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); return; }
+    $('name-error').style.display = 'none';
+    $('opponent-step1').style.display = 'none';
+    $('opponent-computer').style.display = 'block';
+    $('opponent-human').style.display = 'none';
+  }
+
+  function showHumanOptions() {
+    $('opponent-step1').style.display = 'none';
+    $('opponent-computer').style.display = 'none';
+    $('opponent-human').style.display = 'block';
+  }
+
+  async function createComputerGame(difficulty) {
+    const name = $('name-input').value.trim();
+    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); return; }
+    $('name-error').style.display = 'none';
+    try {
+      const mode = $('mode-select').value;
+      const res = await fetch('/api/join', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ name, mode, computer: difficulty }),
+      });
+      const data = await res.json();
+      gameId = data.game_id;
+      playerId = data.player_id;
+      gameMode = data.mode || mode;
+      isComputerGame = true;
+      saveName(name);
+      saveSession();
+      startPolling();
+    } catch (err) {
+      alert('Could not connect to server. Is it running?');
+    }
+  }
 
   function showJoinCode() {
     const section = $('join-code-section');
@@ -802,8 +871,9 @@
   }
 
   function render(s) {
-    // Track mode from server state
+    // Track mode and computer flag from server state
     if (s.mode) gameMode = s.mode;
+    if (s.computer) isComputerGame = true;
 
     // Adjust poll speed: fast while waiting/lobby, normal during gameplay
     const desiredInterval = (s.state === 'waiting' || s.state === 'lobby') ? 500 : 1000;

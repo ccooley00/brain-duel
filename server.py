@@ -48,6 +48,12 @@ TOTAL_ROUNDS = 10
 POINTS_CORRECT = 10
 POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
 
+COMPUTER_OPPONENTS = {
+    "hal": {"name": "HAL 9000", "accuracy": 0.30, "min_time": 8.0, "max_time": 15.0},
+    "terminator": {"name": "Terminator", "accuracy": 0.65, "min_time": 4.0, "max_time": 8.0},
+    "claude": {"name": "Claude", "accuracy": 0.92, "min_time": 1.5, "max_time": 4.0},
+}
+
 # ── Game State ───────────────────────────────────────────────────────────────
 
 games = {}       # game_id -> game dict
@@ -204,6 +210,7 @@ def get_safe_state(game, player_id):
         "round_results": g["round_results"],
         "mode": g.get("mode", "fun"),
         "mode_name": MODE_NAMES.get(g.get("mode", "fun"), "Fun"),
+        "computer": bool(g.get("computer_player_id")),
     }
 
     if g["state"] == "waiting" and g.get("room_code"):
@@ -300,9 +307,54 @@ def advance_round(game):
 def _update_leaderboard(game):
     """Add players from a finished game to the Supabase leaderboard."""
     mode = game.get("mode", "fun")
+    cpu_id = game.get("computer_player_id")
     for pid in game["player_order"]:
+        if pid == cpu_id:
+            continue
         p = game["players"][pid]
         _insert_leaderboard_entry(p["name"], p["score"], round(p["total_time"], 1), mode)
+
+
+def _generate_computer_answers(game, difficulty):
+    """Pre-roll all computer answers at game creation time."""
+    config = COMPUTER_OPPONENTS[difficulty]
+    answers = []
+    for q in game["questions"]:
+        correct = random.random() < config["accuracy"]
+        delay = random.uniform(config["min_time"], config["max_time"])
+        choices_key = "choices" if "choices" in q else "options"
+        if correct:
+            choice = q["answer"]
+        else:
+            wrong = [c for c in q[choices_key] if c != q["answer"]]
+            choice = random.choice(wrong) if wrong else q["answer"]
+        answers.append({"choice": choice, "delay": delay})
+    game["computer_answers"] = answers
+
+
+def _maybe_computer_answer(game):
+    """Check if the computer's simulated answer time has elapsed and record it."""
+    cpu_id = game.get("computer_player_id")
+    if not cpu_id or game["state"] != "active":
+        return
+    rd = game["round"]
+    rd_answers = game["answers"].get(rd, {})
+    if cpu_id in rd_answers:
+        return
+    round_start = game.get("round_start")
+    if not round_start:
+        return
+    ca = game["computer_answers"][rd]
+    elapsed = time.time() - round_start
+    if elapsed >= ca["delay"]:
+        if rd not in game["answers"]:
+            game["answers"][rd] = {}
+        game["answers"][rd][cpu_id] = {
+            "choice": ca["choice"],
+            "time": round_start + ca["delay"],
+            "correct": ca["choice"] == game["questions"][rd]["answer"],
+        }
+        advance_round(game)
 
 
 def next_round_if_ready(game):
@@ -403,6 +455,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 game = games[game_id]
                 game["last_poll"][player_id] = time.time()
                 next_round_if_ready(game)
+                _maybe_computer_answer(game)
                 self._json_response(get_safe_state(game, player_id))
             return
 
@@ -440,8 +493,31 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 mode = "fun"
             player_id = str(uuid.uuid4())[:8]
 
+            computer = data.get("computer", "").strip().lower()
+
             with game_lock:
                 cleanup_stale_rooms()
+
+                if computer and computer in COMPUTER_OPPONENTS:
+                    # Create a game vs computer
+                    config = COMPUTER_OPPONENTS[computer]
+                    game = new_game(mode)
+                    game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
+                    game["player_order"].append(player_id)
+                    cpu_id = "cpu_" + str(uuid.uuid4())[:8]
+                    game["players"][cpu_id] = {"name": config["name"], "score": 0, "total_time": 0.0}
+                    game["player_order"].append(cpu_id)
+                    game["computer_player_id"] = cpu_id
+                    _generate_computer_answers(game, computer)
+                    game["state"] = "lobby"
+                    game["ready"][cpu_id] = True
+                    self._json_response({
+                        "game_id": game["id"],
+                        "player_id": player_id,
+                        "mode": mode,
+                        "computer": True,
+                    })
+                    return
 
                 if room_code:
                     # Join an existing room
@@ -499,6 +575,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 if len(game["ready"]) == 2:
                     game["state"] = "active"
                     game["round_start"] = time.time()
+                    _maybe_computer_answer(game)
             self._json_response({"ok": True})
             return
 
@@ -532,6 +609,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 }
 
                 advance_round(game)
+                _maybe_computer_answer(game)
             self._json_response({"ok": True})
             return
 

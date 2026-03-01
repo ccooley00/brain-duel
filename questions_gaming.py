@@ -75,12 +75,6 @@ QUESTIONS = [
     },
     {
         "category": "Gaming",
-        "question": "What year was Fortnite Battle Royale first released?",
-        "choices": ["2015", "2016", "2017", "2018"],
-        "answer": "2017",
-    },
-    {
-        "category": "Gaming",
         "question": "What fictional city is the setting of Grand Theft Auto V?",
         "choices": ["Liberty City", "Vice City", "Los Santos", "San Fierro"],
         "answer": "Los Santos",
@@ -142,12 +136,6 @@ QUESTIONS = [
     },
     {
         "category": "Gaming",
-        "question": "What year was the Nintendo Switch released?",
-        "choices": ["2015", "2016", "2017", "2018"],
-        "answer": "2017",
-    },
-    {
-        "category": "Gaming",
         "question": "What was the last home video game console manufactured by Sega?",
         "choices": ["Sega Saturn", "Sega Genesis", "Sega Dreamcast", "Sega Master System"],
         "answer": "Sega Dreamcast",
@@ -160,9 +148,9 @@ QUESTIONS = [
     },
     {
         "category": "Gaming",
-        "question": "Which Nintendo console featured motion-control gameplay with the Wii Remote as its primary input?",
-        "choices": ["GameCube", "Nintendo DS", "Wii", "Nintendo 64"],
-        "answer": "Wii",
+        "question": "The Nintendo Switch is a hybrid console that can be played on a TV and as a handheld. What year was it released?",
+        "choices": ["2015", "2016", "2017", "2018"],
+        "answer": "2017",
     },
     # ── Famous Game Characters ──
     {
@@ -254,12 +242,6 @@ QUESTIONS = [
     },
     {
         "category": "Gaming",
-        "question": "Which company developed the first Call of Duty game?",
-        "choices": ["DICE", "Treyarch", "Infinity Ward", "Sledgehammer Games"],
-        "answer": "Infinity Ward",
-    },
-    {
-        "category": "Gaming",
         "question": "Which author collaborated with Hidetaka Miyazaki on the worldbuilding for Elden Ring?",
         "choices": ["J.K. Rowling", "George R. R. Martin", "Brandon Sanderson", "Patrick Rothfuss"],
         "answer": "George R. R. Martin",
@@ -315,18 +297,6 @@ QUESTIONS = [
         "choices": ["Half-Life 2", "Portal", "BioShock", "Team Fortress 2"],
         "answer": "Portal",
     },
-    {
-        "category": "Gaming",
-        "question": "The Legend of Zelda: Ocarina of Time, widely regarded as one of the greatest games ever, was released for which console?",
-        "choices": ["Super Nintendo", "Nintendo 64", "GameCube", "Game Boy Advance"],
-        "answer": "Nintendo 64",
-    },
-    {
-        "category": "Gaming",
-        "question": "Which five sports are included in Wii Sports, the game bundled with the Nintendo Wii?",
-        "choices": ["Tennis, Soccer, Bowling, Golf, Boxing", "Tennis, Baseball, Bowling, Golf, Boxing", "Tennis, Baseball, Basketball, Golf, Boxing", "Tennis, Baseball, Bowling, Golf, Swimming"],
-        "answer": "Tennis, Baseball, Bowling, Golf, Boxing",
-    },
     # ── Indie Games ──
     {
         "category": "Gaming",
@@ -336,39 +306,8 @@ QUESTIONS = [
     },
     {
         "category": "Gaming",
-        "question": "Which indie game developer created the RPG Undertale?",
-        "choices": ["Toby Fox", "Edmund McMillen", "Phil Fish", "Jonathan Blow"],
-        "answer": "Toby Fox",
-    },
-    {
-        "category": "Gaming",
-        "question": "Which indie game studio from Australia developed Hollow Knight?",
-        "choices": ["Supergiant Games", "Team Cherry", "Motion Twin", "Devolver Digital"],
-        "answer": "Team Cherry",
-    },
-    {
-        "category": "Gaming",
         "question": "Which indie game developed by Supergiant Games features Zagreus trying to escape the Greek Underworld?",
         "choices": ["Bastion", "Transistor", "Pyre", "Hades"],
         "answer": "Hades",
-    },
-    {
-        "category": "Gaming",
-        "question": "The indie platformer Celeste follows a character named Madeline climbing a mountain. What theme does the game explore?",
-        "choices": ["Time travel", "Alien invasion", "Anxiety and depression", "Environmental destruction"],
-        "answer": "Anxiety and depression",
-    },
-    # ── Bonus Mix ──
-    {
-        "category": "Gaming",
-        "question": "Super Smash Bros. is a crossover fighting game series published by which company?",
-        "choices": ["Sega", "Sony", "Nintendo", "Capcom"],
-        "answer": "Nintendo",
-    },
-    {
-        "category": "Gaming",
-        "question": "What is the name of Valve's digital game distribution platform for PC?",
-        "choices": ["Origin", "Steam", "Epic Games Store", "GOG"],
-        "answer": "Steam",
     },
 ]
