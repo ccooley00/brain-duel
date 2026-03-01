@@ -360,7 +360,7 @@ def _maybe_computer_answer(game):
 def next_round_if_ready(game):
     """Move from round_result to active if enough time has passed."""
     if game["state"] == "round_result" and game["result_shown_at"]:
-        if time.time() - game["result_shown_at"] > 2:
+        if time.time() - game["result_shown_at"] > 3:
             game["state"] = "active"
             game["round_start"] = time.time()
 
