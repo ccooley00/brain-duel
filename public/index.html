@@ -450,15 +450,15 @@
           <p style="color:var(--muted);margin-bottom:24px;">Choose your opponent</p>
           <div style="display:flex;gap:12px;">
             <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="goToCategoryStep('computer')">Super Computer</button>
-            <button class="btn btn-primary" style="flex:1;" onclick="goToHumanStep()">Another Player</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="goToCategoryStep('human')">Another Player</button>
           </div>
           <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToNameStep()">Back</button>
         </div>
 
-        <!-- Step 3a: Category + computer opponent picker -->
-        <div id="join-step-computer" style="display:none;">
+        <!-- Step 3: Pick a category (shared by computer + human create paths) -->
+        <div id="join-step-category" style="display:none;">
           <h2 style="margin-bottom:8px;">Pick a Category</h2>
-          <p style="color:var(--muted);margin-bottom:24px;">Then choose your opponent</p>
+          <p style="color:var(--muted);margin-bottom:24px;">Choose what you'll be quizzed on</p>
           <div class="mode-selector">
             <label>Category</label>
             <select id="mode-select">
@@ -469,45 +469,34 @@
               <option value="cooleys">History of Cooleys</option>
             </select>
           </div>
-          <p style="color:var(--muted);margin-top:16px;margin-bottom:12px;">Choose your opponent:</p>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="categoryNext()">Next</button>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
+        </div>
+
+        <!-- Step 4a: Computer opponent picker -->
+        <div id="join-step-computer" style="display:none;">
+          <h2 style="margin-bottom:8px;">Choose Your Opponent</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Pick a computer to battle</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <button class="btn" style="background:linear-gradient(135deg,#dc2626,#991b1b);font-size:1.15rem;" onclick="createComputerGame('hal')">HAL 9000</button>
             <button class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);font-size:1.15rem;" onclick="createComputerGame('terminator')">Terminator</button>
             <button class="btn" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);font-size:1.15rem;" onclick="createComputerGame('claude')">Claude</button>
           </div>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToCategoryStep()">Back</button>
         </div>
 
-        <!-- Step 3b: Human multiplayer options -->
+        <!-- Step 4b: Human - create game (launches immediately) or join -->
         <div id="join-step-human" style="display:none;">
           <h2 style="margin-bottom:8px;">Play a Friend</h2>
           <p style="color:var(--muted);margin-bottom:24px;">Create a game or join with a code</p>
           <div style="display:flex;gap:12px;">
-            <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="goToCreateStep()">Create Game</button>
+            <button class="btn btn-primary" style="flex:1;" id="create-btn-go" onclick="createGame()">Create Game</button>
             <button class="btn btn-green" style="flex:1;" onclick="goToJoinStep()">Join Game</button>
           </div>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToCategoryStep()">Back</button>
         </div>
 
-        <!-- Step 4a: Human create - category select -->
-        <div id="join-step-create" style="display:none;">
-          <h2 style="margin-bottom:8px;">Pick a Category</h2>
-          <p style="color:var(--muted);margin-bottom:24px;">Choose what you'll be quizzed on</p>
-          <div class="mode-selector">
-            <label>Category</label>
-            <select id="mode-select-create">
-              <option value="fun">Fun</option>
-              <option value="nyc">NYC History</option>
-              <option value="gaming">Gaming</option>
-              <option value="colgate">Colgate University</option>
-              <option value="cooleys">History of Cooleys</option>
-            </select>
-          </div>
-          <button class="btn btn-primary" style="width:100%;margin-top:16px;" id="create-btn-go" onclick="createGame()">Create Game</button>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToHumanStep()">Back</button>
-        </div>
-
-        <!-- Step 4b: Human join - room code -->
+        <!-- Step 4c: Human join - room code -->
         <div id="join-step-join" style="display:none;">
           <h2 style="margin-bottom:8px;">Join a Game</h2>
           <p style="color:var(--muted);margin-bottom:24px;">Enter the room code from your friend</p>
@@ -729,7 +718,8 @@
 
   let roomCode = null;
 
-  const joinSteps = ['join-step-name','join-step-opponent','join-step-computer','join-step-human','join-step-create','join-step-join'];
+  const joinSteps = ['join-step-name','join-step-opponent','join-step-category','join-step-computer','join-step-human','join-step-join'];
+  let categoryPath = 'computer'; // tracks which path led to category screen
   function showJoinStep(id) {
     joinSteps.forEach(s => $(s).style.display = 'none');
     $(id).style.display = 'block';
@@ -742,9 +732,14 @@
     $('name-error').style.display = 'none';
     showJoinStep('join-step-opponent');
   }
-  function goToCategoryStep() { showJoinStep('join-step-computer'); }
-  function goToHumanStep() { showJoinStep('join-step-human'); }
-  function goToCreateStep() { showJoinStep('join-step-create'); }
+  function goToCategoryStep(path) {
+    if (path) categoryPath = path;
+    showJoinStep('join-step-category');
+  }
+  function categoryNext() {
+    if (categoryPath === 'computer') showJoinStep('join-step-computer');
+    else showJoinStep('join-step-human');
+  }
   function goToJoinStep() { showJoinStep('join-step-join'); $('code-input').focus(); }
 
   async function createComputerGame(difficulty) {
@@ -787,7 +782,7 @@
     $('create-btn-go').textContent = 'Creating...';
 
     try {
-      const mode = $('mode-select-create').value;
+      const mode = $('mode-select').value;
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: API_HEADERS,
