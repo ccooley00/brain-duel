@@ -212,7 +212,7 @@ QUESTIONS = [
     },
     {
         "category": "Speed Round",
-        "question": "Which of these is NOT a primary color?",
+        "question": "Which of these is NOT a primary color of paint?",
         "choices": ["Red", "Blue", "Green", "Yellow"],
         "answer": "Green",
     },
@@ -546,7 +546,7 @@ QUESTIONS = [
     },
     {
         "category": "YouTubers",
-        "question": "Which YouTuber is known for funny gaming videos and is part of the 'Robust' trio with Slogo and Crainer?",
+        "question": "Which YouTuber is known for funny gaming videos and is part of the 'Traffic Light Squad' with Slogo and Crainer?",
         "choices": ["Flamingo", "Jelly", "Kwebbelkop", "Lazarbeam"],
         "answer": "Jelly",
     },
@@ -651,8 +651,8 @@ QUESTIONS = [
     },
     {
         "category": "Words",
-        "question": "What is the longest word using only the letters A, B, C, D, and E?",
-        "choices": ["BEAD", "DECADE", "BEADED", "ABACADE"],
+        "question": "Which of these words uses ONLY the letters A, B, C, D, and E?",
+        "choices": ["BRAID", "DECADE", "BEADED", "BACKED"],
         "answer": "BEADED",
     },
     {
@@ -663,9 +663,9 @@ QUESTIONS = [
     },
     {
         "category": "Words",
-        "question": "Unscramble: NARBAAI",
-        "choices": ["BANANA", "ARRABIAN", "NIAGARA", "BANDANA"],
-        "answer": "BANDANA",
+        "question": "Unscramble: NAABRAI",
+        "choices": ["BANANA", "ARABIAN", "NIAGARA", "BANDANA"],
+        "answer": "ARABIAN",
     },
     {
         "category": "Words",
@@ -770,7 +770,7 @@ QUESTIONS = [
         "category": "Minecraft",
         "question": "What is the rarest ore in vanilla Minecraft?",
         "choices": ["Diamond", "Emerald", "Ancient Debris", "Lapis Lazuli"],
-        "answer": "Ancient Debris",
+        "answer": "Emerald",
     },
     {
         "category": "Minecraft",
@@ -829,9 +829,9 @@ QUESTIONS = [
     },
     {
         "category": "Roblox",
-        "question": "In Roblox Jailbreak, what are the two main teams?",
-        "choices": ["Cops and Robbers", "Prisoners and Police", "Heroes and Villains", "Guards and Inmates"],
-        "answer": "Prisoners and Police",
+        "question": "In Roblox Jailbreak, what are the two teams you can choose when joining?",
+        "choices": ["Cops and Robbers", "Prisoner and Police", "Heroes and Villains", "Guards and Inmates"],
+        "answer": "Prisoner and Police",
     },
     # ── More Picture Round ──
     {
