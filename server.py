@@ -68,6 +68,7 @@ def _supabase_headers():
 def _load_leaderboard(mode="fun"):
     """Load top 10 from Supabase for a specific mode, sorted by score desc then time asc."""
     if not SUPABASE_URL or not SUPABASE_KEY:
+        print(f"[LEADERBOARD] Skipping load — SUPABASE_URL={'set' if SUPABASE_URL else 'MISSING'}, SUPABASE_KEY={'set' if SUPABASE_KEY else 'MISSING'}")
         return []
     try:
         url = (
@@ -79,22 +80,28 @@ def _load_leaderboard(mode="fun"):
         )
         req = urllib.request.Request(url, headers=_supabase_headers())
         with urllib.request.urlopen(req, timeout=5) as resp:
-            return json.loads(resp.read())
-    except Exception:
+            data = json.loads(resp.read())
+            print(f"[LEADERBOARD] Loaded {len(data)} entries for mode={mode}")
+            return data
+    except Exception as e:
+        print(f"[LEADERBOARD] Load FAILED for mode={mode}: {e}")
         return []
 
 
 def _insert_leaderboard_entry(name, score, total_time, mode="fun"):
     """Insert a single entry into the Supabase leaderboard."""
     if not SUPABASE_URL or not SUPABASE_KEY:
+        print(f"[LEADERBOARD] Skipping insert — SUPABASE_URL={'set' if SUPABASE_URL else 'MISSING'}, SUPABASE_KEY={'set' if SUPABASE_KEY else 'MISSING'}")
         return
     try:
         url = f"{SUPABASE_URL}/rest/v1/leaderboard"
-        data = json.dumps({"name": name, "score": score, "total_time": total_time, "mode": mode}).encode()
+        payload = {"name": name, "score": score, "total_time": total_time, "mode": mode}
+        data = json.dumps(payload).encode()
         req = urllib.request.Request(url, data=data, headers=_supabase_headers(), method="POST")
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
+        resp = urllib.request.urlopen(req, timeout=5)
+        print(f"[LEADERBOARD] Inserted: {name} score={score} time={total_time} mode={mode} (HTTP {resp.status})")
+    except Exception as e:
+        print(f"[LEADERBOARD] Insert FAILED for {name}: {e}")
 
 
 recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
@@ -522,6 +529,8 @@ def run(port=8080):
     print(f"=== Brain Duel Server ===")
     print(f"Game running at: http://localhost:{port}")
     print(f"Share your IP address for remote play (port {port})")
+    print(f"SUPABASE_URL: {'configured' if SUPABASE_URL else 'NOT SET'}")
+    print(f"SUPABASE_KEY: {'configured' if SUPABASE_KEY else 'NOT SET'}")
     print(f"Press Ctrl+C to stop.\n")
     try:
         server.serve_forever()

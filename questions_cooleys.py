@@ -61,6 +61,97 @@ QUESTIONS = [
         "choices": ["Benjamin Franklin Cooley", "Mortimer Elwyn Cooley", "Thomas McIntyre Cooley", "John Adams Cooley"],
         "answer": "Mortimer Elwyn Cooley",
     },
+    # ── Benjamin Cooley: Life & Legacy ──
+    {
+        "category": "Cooley History",
+        "question": "What was Benjamin Cooley's trade or occupation in colonial Springfield?",
+        "choices": ["Blacksmith", "Weaver", "Carpenter", "Tanner"],
+        "answer": "Weaver",
+    },
+    {
+        "category": "Cooley History",
+        "question": "How many children did Benjamin and Sarah Cooley have?",
+        "choices": ["Five", "Six", "Eight", "Twelve"],
+        "answer": "Eight",
+    },
+    {
+        "category": "Cooley History",
+        "question": "What was the name of Benjamin Cooley's eldest child, born September 16, 1643?",
+        "choices": ["Sarah", "Mary", "Bethia", "Obadiah"],
+        "answer": "Bethia",
+    },
+    {
+        "category": "Cooley History",
+        "question": "How many times was Benjamin Cooley chosen as Selectman of Springfield?",
+        "choices": ["5 times", "10 times", "18 times", "25 times"],
+        "answer": "18 times",
+    },
+    {
+        "category": "Cooley History",
+        "question": "In what year was Benjamin Cooley first elected Selectman of Springfield?",
+        "choices": ["1643", "1646", "1650", "1660"],
+        "answer": "1646",
+    },
+    {
+        "category": "Cooley History",
+        "question": "In 1650, who was apprenticed to Benjamin Cooley to learn linen weaving?",
+        "choices": ["George Colton", "John Pynchon", "Samuel Terry", "Miles Morgan"],
+        "answer": "Samuel Terry",
+    },
+    {
+        "category": "Cooley History",
+        "question": "Benjamin Cooley was a witness in the 1651 witch trial of which Springfield couple, predating Salem by over 40 years?",
+        "choices": ["Hugh and Mary Parsons", "John and Elizabeth Proctor", "Thomas and Ann Putnam", "Samuel and Sarah Good"],
+        "answer": "Hugh and Mary Parsons",
+    },
+    {
+        "category": "Cooley History",
+        "question": "In 1679, what reason did Benjamin Cooley give when petitioning to resign his Ensign commission?",
+        "choices": ["Injury from battle", "Being aged and deaf", "Moving to a new town", "Financial hardship"],
+        "answer": "Being aged and deaf",
+    },
+    {
+        "category": "Cooley History",
+        "question": "How many days after Benjamin Cooley's death on August 17, 1684 did his wife Sarah die?",
+        "choices": ["Two days", "Six days", "Fourteen days", "Thirty days"],
+        "answer": "Six days",
+    },
+    {
+        "category": "Cooley History",
+        "question": "Approximately how many acres did Benjamin Cooley's estate include at the time of his death?",
+        "choices": ["40 acres", "150 acres", "524 acres", "1,000 acres"],
+        "answer": "524 acres",
+    },
+    {
+        "category": "Cooley History",
+        "question": "During King Philip's War in October 1675, how many of Springfield's 60 houses were burned by attacking forces?",
+        "choices": ["10", "25", "45", "58"],
+        "answer": "45",
+    },
+    {
+        "category": "Cooley History",
+        "question": "How was Benjamin Cooley's surname spelled in the Tring parish baptism records?",
+        "choices": ["Cooley", "Coley", "Cowley", "Coulley"],
+        "answer": "Coley",
+    },
+    {
+        "category": "Cooley History",
+        "question": "What were the names of Benjamin Cooley's parents, married in 1607 in Tring Parish?",
+        "choices": ["Thomas and Mary Cooley", "William Cooley and Joan Arnot", "Richard and Elizabeth Cooley", "Henry Cooley and Anne Baker"],
+        "answer": "William Cooley and Joan Arnot",
+    },
+    {
+        "category": "Cooley History",
+        "question": "Why were Benjamin Cooley's remains relocated from the original Springfield burying ground in 1848-49?",
+        "choices": ["Flooding from the river", "To make room for railroad tracks", "To build a new church", "A cemetery fire"],
+        "answer": "To make room for railroad tracks",
+    },
+    {
+        "category": "Cooley History",
+        "question": "What geographic feature in Longmeadow, Massachusetts bears the Cooley name?",
+        "choices": ["Cooley Mountain", "Cooley Brook", "Lake Cooley", "Cooley Falls"],
+        "answer": "Cooley Brook",
+    },
     # ── Denton Cooley: Heart Surgeon ──
     {
         "category": "Famous Cooleys",
