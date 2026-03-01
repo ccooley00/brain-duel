@@ -434,50 +434,87 @@
     <!-- JOIN SCREEN -->
     <div id="screen-join" class="screen active">
       <div class="join-box">
-        <h2 style="margin-bottom:8px;">Enter the Arena</h2>
-        <p style="color:var(--muted);margin-bottom:24px;">Enter your name, then create or join a game</p>
-        <label style="display:block;text-align:left;color:var(--muted);font-size:0.9rem;margin-bottom:6px;">Your Name</label>
-        <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autofocus>
-        <p id="name-error" style="color:var(--red);margin-top:4px;margin-bottom:4px;display:none;font-size:0.9rem;">Please enter your name first!</p>
-        <div class="mode-selector">
-          <label>Game Mode</label>
-          <select id="mode-select">
-            <option value="fun">Fun</option>
-            <option value="nyc">NYC History</option>
-            <option value="gaming">Gaming</option>
-            <option value="colgate">Colgate University</option>
-            <option value="cooleys">History of Cooleys</option>
-          </select>
-        </div>
-        <!-- Step 1: Choose opponent type -->
-        <div id="opponent-step1" style="display:flex;gap:12px;margin-top:16px;">
-          <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="showComputerPicker()">Super Computer</button>
-          <button class="btn btn-primary" style="flex:1;" onclick="showHumanOptions()">Another Player</button>
+        <!-- Step 1: Enter name -->
+        <div id="join-step-name">
+          <h2 style="margin-bottom:8px;">Enter the Arena</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">What should we call you?</p>
+          <label style="display:block;text-align:left;color:var(--muted);font-size:0.9rem;margin-bottom:6px;">Your Name</label>
+          <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autofocus>
+          <p id="name-error" style="color:var(--red);margin-top:4px;margin-bottom:4px;display:none;font-size:0.9rem;">Please enter your name first!</p>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="goToOpponentStep()">Next</button>
         </div>
 
-        <!-- Step 2a: Computer opponent picker -->
-        <div id="opponent-computer" style="display:none;margin-top:16px;">
-          <p style="color:var(--muted);margin-bottom:12px;">Choose your opponent:</p>
+        <!-- Step 2: Choose opponent type -->
+        <div id="join-step-opponent" style="display:none;">
+          <h2 style="margin-bottom:8px;">Who do you want to play?</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Choose your opponent</p>
+          <div style="display:flex;gap:12px;">
+            <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="goToCategoryStep('computer')">Super Computer</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="goToHumanStep()">Another Player</button>
+          </div>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToNameStep()">Back</button>
+        </div>
+
+        <!-- Step 3a: Category + computer opponent picker -->
+        <div id="join-step-computer" style="display:none;">
+          <h2 style="margin-bottom:8px;">Pick a Category</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Then choose your opponent</p>
+          <div class="mode-selector">
+            <label>Category</label>
+            <select id="mode-select">
+              <option value="fun">Fun</option>
+              <option value="nyc">NYC History</option>
+              <option value="gaming">Gaming</option>
+              <option value="colgate">Colgate University</option>
+              <option value="cooleys">History of Cooleys</option>
+            </select>
+          </div>
+          <p style="color:var(--muted);margin-top:16px;margin-bottom:12px;">Choose your opponent:</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <button class="btn" style="background:linear-gradient(135deg,#dc2626,#991b1b);font-size:1.15rem;" onclick="createComputerGame('hal')">HAL 9000</button>
             <button class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);font-size:1.15rem;" onclick="createComputerGame('terminator')">Terminator</button>
             <button class="btn" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);font-size:1.15rem;" onclick="createComputerGame('claude')">Claude</button>
           </div>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="showStep1()">Back</button>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
         </div>
 
-        <!-- Step 2b: Human multiplayer options -->
-        <div id="opponent-human" style="display:none;margin-top:16px;">
+        <!-- Step 3b: Human multiplayer options -->
+        <div id="join-step-human" style="display:none;">
+          <h2 style="margin-bottom:8px;">Play a Friend</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Create a game or join with a code</p>
           <div style="display:flex;gap:12px;">
-            <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="createGame()">Create Game</button>
-            <button class="btn btn-green" style="flex:1;" id="show-join-btn" onclick="showJoinCode()">Join Game</button>
+            <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="goToCreateStep()">Create Game</button>
+            <button class="btn btn-green" style="flex:1;" onclick="goToJoinStep()">Join Game</button>
           </div>
-          <div id="join-code-section" style="display:none;margin-top:16px;">
-            <input type="text" id="code-input" placeholder="Enter room code..." maxlength="4" style="text-transform:uppercase;text-align:center;font-size:1.4rem;letter-spacing:6px;font-weight:700;">
-            <button class="btn btn-green" style="width:100;margin-top:8px;" id="join-btn" onclick="joinGame()">Join</button>
-            <p id="join-error" style="color:var(--red);margin-top:8px;display:none;"></p>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
+        </div>
+
+        <!-- Step 4a: Human create - category select -->
+        <div id="join-step-create" style="display:none;">
+          <h2 style="margin-bottom:8px;">Pick a Category</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Choose what you'll be quizzed on</p>
+          <div class="mode-selector">
+            <label>Category</label>
+            <select id="mode-select-create">
+              <option value="fun">Fun</option>
+              <option value="nyc">NYC History</option>
+              <option value="gaming">Gaming</option>
+              <option value="colgate">Colgate University</option>
+              <option value="cooleys">History of Cooleys</option>
+            </select>
           </div>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="showStep1()">Back</button>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px;" id="create-btn-go" onclick="createGame()">Create Game</button>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToHumanStep()">Back</button>
+        </div>
+
+        <!-- Step 4b: Human join - room code -->
+        <div id="join-step-join" style="display:none;">
+          <h2 style="margin-bottom:8px;">Join a Game</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Enter the room code from your friend</p>
+          <input type="text" id="code-input" placeholder="Enter room code..." maxlength="4" style="text-transform:uppercase;text-align:center;font-size:1.4rem;letter-spacing:6px;font-weight:700;">
+          <button class="btn btn-green" style="width:100%;margin-top:8px;" id="join-btn" onclick="joinGame()">Join</button>
+          <p id="join-error" style="color:var(--red);margin-top:8px;display:none;"></p>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToHumanStep()">Back</button>
         </div>
       </div>
       <div style="text-align:center;margin-top:20px;">
@@ -692,33 +729,26 @@
 
   let roomCode = null;
 
-  function showStep1() {
-    $('opponent-step1').style.display = 'flex';
-    $('opponent-computer').style.display = 'none';
-    $('opponent-human').style.display = 'none';
-    document.querySelector('.mode-selector').style.display = 'block';
-    $('join-code-section').style.display = 'none';
+  const joinSteps = ['join-step-name','join-step-opponent','join-step-computer','join-step-human','join-step-create','join-step-join'];
+  function showJoinStep(id) {
+    joinSteps.forEach(s => $(s).style.display = 'none');
+    $(id).style.display = 'block';
   }
 
-  function showComputerPicker() {
+  function goToNameStep() { showJoinStep('join-step-name'); }
+  function goToOpponentStep() {
     const name = $('name-input').value.trim();
-    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); return; }
+    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); showJoinStep('join-step-name'); return; }
     $('name-error').style.display = 'none';
-    $('opponent-step1').style.display = 'none';
-    $('opponent-computer').style.display = 'block';
-    $('opponent-human').style.display = 'none';
+    showJoinStep('join-step-opponent');
   }
-
-  function showHumanOptions() {
-    $('opponent-step1').style.display = 'none';
-    $('opponent-computer').style.display = 'none';
-    $('opponent-human').style.display = 'block';
-  }
+  function goToCategoryStep() { showJoinStep('join-step-computer'); }
+  function goToHumanStep() { showJoinStep('join-step-human'); }
+  function goToCreateStep() { showJoinStep('join-step-create'); }
+  function goToJoinStep() { showJoinStep('join-step-join'); $('code-input').focus(); }
 
   async function createComputerGame(difficulty) {
     const name = $('name-input').value.trim();
-    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); return; }
-    $('name-error').style.display = 'none';
     try {
       const mode = $('mode-select').value;
       const res = await fetch('/api/join', {
@@ -739,17 +769,11 @@
     }
   }
 
-  function showJoinCode() {
-    const section = $('join-code-section');
-    const modeSelector = document.querySelector('.mode-selector');
-    const isShowing = section.style.display === 'none';
-    section.style.display = isShowing ? 'block' : 'none';
-    modeSelector.style.display = isShowing ? 'none' : 'block';
-    if (isShowing) $('code-input').focus();
-  }
-
   $('name-input').addEventListener('input', () => {
     $('name-error').style.display = 'none';
+  });
+  $('name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') goToOpponentStep();
   });
 
   // Allow Enter key in code input
@@ -759,17 +783,11 @@
 
   async function createGame() {
     const name = $('name-input').value.trim();
-    if (!name) {
-      $('name-error').style.display = 'block';
-      $('name-input').focus();
-      return;
-    }
-    $('name-error').style.display = 'none';
-    $('create-btn').disabled = true;
-    $('create-btn').textContent = 'Creating...';
+    $('create-btn-go').disabled = true;
+    $('create-btn-go').textContent = 'Creating...';
 
     try {
-      const mode = $('mode-select').value;
+      const mode = $('mode-select-create').value;
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: API_HEADERS,
@@ -788,19 +806,13 @@
       startPolling();
     } catch (err) {
       alert('Could not connect to server. Is it running?');
-      $('create-btn').disabled = false;
-      $('create-btn').textContent = 'Create Game';
+      $('create-btn-go').disabled = false;
+      $('create-btn-go').textContent = 'Create Game';
     }
   }
 
   async function joinGame() {
     const name = $('name-input').value.trim();
-    if (!name) {
-      $('name-error').style.display = 'block';
-      $('name-input').focus();
-      return;
-    }
-    $('name-error').style.display = 'none';
     const code = $('code-input').value.trim().toUpperCase();
     if (!code || code.length !== 4) {
       $('join-error').textContent = 'Please enter a 4-letter code.';
