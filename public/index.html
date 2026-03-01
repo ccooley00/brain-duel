@@ -78,13 +78,6 @@
   .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
   .btn-green { background: var(--green); }
 
-  /* ── Waiting ── */
-  .waiting-box {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 40px;
-    text-align: center;
-  }
   .spinner {
     display: inline-block;
     width: 40px; height: 40px;
@@ -392,6 +385,40 @@
     margin-top: 8px;
   }
 
+  /* ── Matchmaking ── */
+  .matchmaking-player {
+    background: var(--bg);
+    border: 2px solid #334155;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .matchmaking-player:hover { border-color: var(--accent); background: #1a2744; }
+  .matchmaking-player.selected-by-you {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.15);
+  }
+  .matchmaking-player.selected-you { border-color: var(--green); }
+  .matchmaking-player.selected-by-you.selected-you {
+    border-color: var(--green);
+    background: rgba(34,197,94,0.15);
+  }
+  .mp-name { font-weight: 600; font-size: 1.1rem; }
+  .mp-badge {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .mp-badge.wants-you { background: rgba(34,197,94,0.2); color: var(--green); }
+  .mp-badge.waiting { color: var(--muted); }
+
   /* ── Leaderboard Mode Tabs ── */
   .lb-tabs {
     display: flex;
@@ -449,8 +476,8 @@
           <h2 style="margin-bottom:8px;">Who do you want to play?</h2>
           <p style="color:var(--muted);margin-bottom:24px;">Choose your opponent</p>
           <div style="display:flex;gap:12px;">
-            <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="goToCategoryStep('computer')">Super Computer</button>
-            <button class="btn btn-primary" style="flex:1;" onclick="goToCategoryStep('human')">Another Player</button>
+            <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="goToCategoryStep()">Super Computer</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="goToMatchmaking()">Another Player</button>
           </div>
           <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToNameStep()">Back</button>
         </div>
@@ -485,25 +512,37 @@
           <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToCategoryStep()">Back</button>
         </div>
 
-        <!-- Step 4b: Human - create game (launches immediately) or join -->
-        <div id="join-step-human" style="display:none;">
-          <h2 style="margin-bottom:8px;">Play a Friend</h2>
-          <p style="color:var(--muted);margin-bottom:24px;">Create a game or join with a code</p>
-          <div style="display:flex;gap:12px;">
-            <button class="btn btn-primary" style="flex:1;" id="create-btn-go" onclick="createGame()">Create Game</button>
-            <button class="btn btn-green" style="flex:1;" onclick="goToJoinStep()">Join Game</button>
+        <!-- Step 4b: Matchmaking lobby -->
+        <div id="join-step-matchmaking" style="display:none;">
+          <h2 style="margin-bottom:8px;">Find an Opponent</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Select a player to challenge. When they select you back, you're matched!</p>
+          <div id="matchmaking-list">
+            <p style="color:var(--muted);font-style:italic;text-align:center;padding:20px;">Waiting for other players to join...</p>
           </div>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToCategoryStep()">Back</button>
+          <div id="matchmaking-status" style="margin-top:12px;color:var(--muted);font-size:0.9rem;text-align:center;"></div>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="leavePool()">Back</button>
         </div>
 
-        <!-- Step 4c: Human join - room code -->
-        <div id="join-step-join" style="display:none;">
-          <h2 style="margin-bottom:8px;">Join a Game</h2>
-          <p style="color:var(--muted);margin-bottom:24px;">Enter the room code from your friend</p>
-          <input type="text" id="code-input" placeholder="Enter room code..." maxlength="4" style="text-transform:uppercase;text-align:center;font-size:1.4rem;letter-spacing:6px;font-weight:700;">
-          <button class="btn btn-green" style="width:100%;margin-top:8px;" id="join-btn" onclick="joinGame()">Join</button>
-          <p id="join-error" style="color:var(--red);margin-top:8px;display:none;"></p>
-          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToHumanStep()">Back</button>
+        <!-- Step 4c: Category select after matching -->
+        <div id="join-step-category-select" style="display:none;">
+          <h2 style="margin-bottom:8px;">Pick a Category</h2>
+          <p style="color:var(--muted);margin-bottom:8px;">Matched with <strong id="match-opponent-name"></strong>!</p>
+          <p style="color:var(--muted);margin-bottom:24px;font-size:0.9rem;">Same pick = 10 questions from that category. Different picks = 5 from each!</p>
+          <div class="mode-selector">
+            <label>Category</label>
+            <select id="match-mode-select">
+              <option value="fun">Fun</option>
+              <option value="nyc">NYC History</option>
+              <option value="gaming">Gaming</option>
+              <option value="colgate">Colgate University</option>
+              <option value="cooleys">History of Cooleys</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px;" id="category-lock-btn" onclick="submitCategory()">Lock In</button>
+          <div id="category-wait-status" style="margin-top:12px;text-align:center;color:var(--muted);font-size:0.9rem;display:none;">
+            <div class="spinner" style="width:24px;height:24px;border-width:3px;margin-bottom:8px;"></div>
+            Waiting for opponent to pick...
+          </div>
         </div>
       </div>
       <div style="text-align:center;margin-top:20px;">
@@ -524,18 +563,8 @@
       </div>
     </div>
 
-    <!-- WAITING SCREEN -->
-    <div id="screen-waiting" class="screen">
-      <div class="waiting-box">
-        <div class="spinner"></div>
-        <h2>Waiting for opponent...</h2>
-        <div class="mode-badge" id="waiting-mode-badge">Fun</div>
-        <p style="color:var(--muted);margin-top:12px;">Share this code with your friend:</p>
-        <p id="room-code-display" style="font-size:3rem;font-weight:700;letter-spacing:12px;color:var(--accent);margin:16px 0;"></p>
-        <button class="btn btn-primary" style="font-size:0.9rem;padding:10px 20px;" onclick="copyRoomCode()">Copy Code</button>
-        <p id="copy-confirm" style="color:var(--green);margin-top:8px;font-size:0.85rem;display:none;">Copied!</p>
-      </div>
-    </div>
+
+
 
     <!-- LOBBY SCREEN -->
     <div id="screen-lobby" class="screen">
@@ -706,7 +735,6 @@
           if (data.ok) {
             gameId = saved.gameId;
             playerId = saved.playerId;
-            showScreen('waiting');
             startPolling();
           } else {
             clearSession();
@@ -716,10 +744,12 @@
     } catch (e) { clearSession(); }
   })();
 
-  let roomCode = null;
+  let poolPlayerId = null;
+  let matchId = null;
+  let poolPollTimer = null;
+  let opponentName = null;
 
-  const joinSteps = ['join-step-name','join-step-opponent','join-step-category','join-step-computer','join-step-human','join-step-join'];
-  let categoryPath = 'computer'; // tracks which path led to category screen
+  const joinSteps = ['join-step-name','join-step-opponent','join-step-category','join-step-computer','join-step-matchmaking','join-step-category-select'];
   function showJoinStep(id) {
     joinSteps.forEach(s => $(s).style.display = 'none');
     $(id).style.display = 'block';
@@ -732,15 +762,8 @@
     $('name-error').style.display = 'none';
     showJoinStep('join-step-opponent');
   }
-  function goToCategoryStep(path) {
-    if (path) categoryPath = path;
-    showJoinStep('join-step-category');
-  }
-  function categoryNext() {
-    if (categoryPath === 'computer') showJoinStep('join-step-computer');
-    else showJoinStep('join-step-human');
-  }
-  function goToJoinStep() { showJoinStep('join-step-join'); $('code-input').focus(); }
+  function goToCategoryStep() { showJoinStep('join-step-category'); }
+  function categoryNext() { showJoinStep('join-step-computer'); }
 
   async function createComputerGame(difficulty) {
     const name = $('name-input').value.trim();
@@ -764,96 +787,154 @@
     }
   }
 
+  // ── Matchmaking ──
+
+  async function goToMatchmaking() {
+    const name = $('name-input').value.trim();
+    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); showJoinStep('join-step-name'); return; }
+    $('name-error').style.display = 'none';
+    saveName(name);
+    showJoinStep('join-step-matchmaking');
+    try {
+      const res = await fetch('/api/pool/join', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      poolPlayerId = data.player_id;
+      startPoolPolling();
+    } catch (err) {
+      alert('Could not connect to server.');
+      showJoinStep('join-step-opponent');
+    }
+  }
+
+  function startPoolPolling() {
+    if (poolPollTimer) clearInterval(poolPollTimer);
+    poolPollTimer = setInterval(pollPoolState, 800);
+    pollPoolState();
+  }
+
+  function stopPoolPolling() {
+    if (poolPollTimer) { clearInterval(poolPollTimer); poolPollTimer = null; }
+  }
+
+  async function pollPoolState() {
+    if (!poolPlayerId) return;
+    try {
+      const res = await fetch(`/api/pool/state?player_id=${poolPlayerId}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      });
+      const data = await res.json();
+      if (data.error) {
+        stopPoolPolling();
+        showJoinStep('join-step-opponent');
+        return;
+      }
+      if (data.status === 'selecting') {
+        renderMatchmakingList(data);
+      } else if (data.status === 'matched' || data.status === 'category_select') {
+        matchId = data.match_id;
+        opponentName = data.opponent_name;
+        showCategorySelect(data);
+      } else if (data.status === 'game_ready') {
+        stopPoolPolling();
+        gameId = data.game_id;
+        playerId = data.player_id;
+        saveSession();
+        startPolling();
+      }
+    } catch (e) { /* network error, keep polling */ }
+  }
+
+  function renderMatchmakingList(data) {
+    const list = $('matchmaking-list');
+    if (data.players.length === 0) {
+      list.innerHTML = '<p style="color:var(--muted);font-style:italic;text-align:center;padding:20px;">Waiting for other players to join...</p>';
+      $('matchmaking-status').textContent = '';
+      return;
+    }
+    let html = '';
+    data.players.forEach(p => {
+      const isSelected = data.your_selection === p.player_id;
+      const selectedYou = p.selected_you;
+      let cls = 'matchmaking-player';
+      if (isSelected) cls += ' selected-by-you';
+      if (selectedYou) cls += ' selected-you';
+      let badge = '';
+      if (selectedYou && isSelected) {
+        badge = '<span class="mp-badge wants-you">Matching...</span>';
+      } else if (selectedYou) {
+        badge = '<span class="mp-badge wants-you">Wants to play you!</span>';
+      } else if (isSelected) {
+        badge = '<span class="mp-badge waiting">Waiting for them...</span>';
+      }
+      html += `<div class="${cls}" onclick="selectPlayer('${p.player_id}')">
+        <span class="mp-name">${p.name}</span>
+        ${badge}
+      </div>`;
+    });
+    list.innerHTML = html;
+    const count = data.players.length;
+    $('matchmaking-status').textContent = count + ' player' + (count !== 1 ? 's' : '') + ' online';
+  }
+
+  async function selectPlayer(targetId) {
+    await fetch('/api/pool/select', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ player_id: poolPlayerId, selected_id: targetId }),
+    });
+  }
+
+  function showCategorySelect(data) {
+    if (currentScreen === 'join' && $('join-step-category-select').style.display === 'block') {
+      // Already showing, just update status
+      if (data.your_category) {
+        $('match-mode-select').disabled = true;
+        $('category-lock-btn').style.display = 'none';
+        $('category-wait-status').style.display = 'block';
+      }
+      return;
+    }
+    showJoinStep('join-step-category-select');
+    $('match-opponent-name').textContent = data.opponent_name;
+    $('match-mode-select').disabled = false;
+    $('category-lock-btn').style.display = '';
+    $('category-wait-status').style.display = 'none';
+    if (data.your_category) {
+      $('match-mode-select').value = data.your_category;
+      $('match-mode-select').disabled = true;
+      $('category-lock-btn').style.display = 'none';
+      $('category-wait-status').style.display = 'block';
+    }
+  }
+
+  async function submitCategory() {
+    const cat = $('match-mode-select').value;
+    await fetch('/api/pool/category', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ player_id: poolPlayerId, match_id: matchId, category: cat }),
+    });
+    $('match-mode-select').disabled = true;
+    $('category-lock-btn').style.display = 'none';
+    $('category-wait-status').style.display = 'block';
+  }
+
+  function leavePool() {
+    stopPoolPolling();
+    poolPlayerId = null;
+    showJoinStep('join-step-opponent');
+  }
+
   $('name-input').addEventListener('input', () => {
     $('name-error').style.display = 'none';
   });
   $('name-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') goToOpponentStep();
   });
-
-  // Allow Enter key in code input
-  $('code-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') joinGame();
-  });
-
-  async function createGame() {
-    const name = $('name-input').value.trim();
-    $('create-btn-go').disabled = true;
-    $('create-btn-go').textContent = 'Creating...';
-
-    try {
-      const mode = $('mode-select').value;
-      const res = await fetch('/api/join', {
-        method: 'POST',
-        headers: API_HEADERS,
-        body: JSON.stringify({ name, mode }),
-      });
-      const data = await res.json();
-      gameId = data.game_id;
-      playerId = data.player_id;
-      roomCode = data.room_code;
-      gameMode = data.mode || mode;
-      saveName(name);
-      saveSession();
-
-      $('room-code-display').textContent = roomCode;
-      showScreen('waiting');
-      startPolling();
-    } catch (err) {
-      alert('Could not connect to server. Is it running?');
-      $('create-btn-go').disabled = false;
-      $('create-btn-go').textContent = 'Create Game';
-    }
-  }
-
-  async function joinGame() {
-    const name = $('name-input').value.trim();
-    const code = $('code-input').value.trim().toUpperCase();
-    if (!code || code.length !== 4) {
-      $('join-error').textContent = 'Please enter a 4-letter code.';
-      $('join-error').style.display = 'block';
-      return;
-    }
-    $('join-btn').disabled = true;
-    $('join-btn').textContent = 'Joining...';
-    $('join-error').style.display = 'none';
-
-    try {
-      const res = await fetch('/api/join', {
-        method: 'POST',
-        headers: API_HEADERS,
-        body: JSON.stringify({ name, room_code: code }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        $('join-error').textContent = data.error;
-        $('join-error').style.display = 'block';
-        $('join-btn').disabled = false;
-        $('join-btn').textContent = 'Join';
-        return;
-      }
-      gameId = data.game_id;
-      playerId = data.player_id;
-      gameMode = data.mode || 'fun';
-      saveName(name);
-      saveSession();
-
-      showScreen('waiting');
-      startPolling();
-    } catch (err) {
-      alert('Could not connect to server. Is it running?');
-      $('join-btn').disabled = false;
-      $('join-btn').textContent = 'Join';
-    }
-  }
-
-  function copyRoomCode() {
-    if (roomCode) {
-      navigator.clipboard.writeText(roomCode);
-      $('copy-confirm').style.display = 'block';
-      setTimeout(() => $('copy-confirm').style.display = 'none', 2000);
-    }
-  }
 
   function startPolling() {
     if (pollTimer) clearInterval(pollTimer);
@@ -883,21 +964,11 @@
     if (s.mode) gameMode = s.mode;
     if (s.computer) isComputerGame = true;
 
-    // Adjust poll speed: fast while waiting/lobby, normal during gameplay
-    const desiredInterval = (s.state === 'waiting' || s.state === 'lobby') ? 500 : 1000;
+    // Adjust poll speed: fast in lobby, normal during gameplay
+    const desiredInterval = s.state === 'lobby' ? 500 : 1000;
     if (pollInterval !== desiredInterval) {
       pollInterval = desiredInterval;
       if (pollTimer) { clearInterval(pollTimer); pollTimer = setInterval(pollState, pollInterval); }
-    }
-
-    if (s.state === 'waiting') {
-      if (currentScreen !== 'waiting') showScreen('waiting');
-      $('waiting-mode-badge').textContent = s.mode_name || MODE_NAMES[gameMode] || 'Fun';
-      if (s.room_code) {
-        roomCode = s.room_code;
-        $('room-code-display').textContent = s.room_code;
-      }
-      return;
     }
 
     if (s.state === 'lobby') {

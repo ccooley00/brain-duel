@@ -57,9 +57,31 @@ COMPUTER_OPPONENTS = {
 # ── Game State ───────────────────────────────────────────────────────────────
 
 games = {}       # game_id -> game dict
-rooms = {}       # room_code -> game_id (for games waiting for player 2)
-game_lock = threading.Lock()  # protects games/rooms from concurrent access
-STALE_TIMEOUT = 30  # seconds before a waiting game is considered abandoned
+game_lock = threading.Lock()  # protects all shared state
+
+# ── Matchmaking Pool ─────────────────────────────────────────────────────────
+
+matchmaking_pool = {}   # player_id -> {name, selected, last_poll, joined_at}
+pending_matches = {}    # match_id -> {players: {pid: {name, category}}, created_at, game_id}
+POOL_STALE_TIMEOUT = 15
+
+
+def cleanup_stale_pool():
+    """Remove stale pool entries and pending matches."""
+    now = time.time()
+    stale = [pid for pid, e in matchmaking_pool.items()
+             if now - e["last_poll"] > POOL_STALE_TIMEOUT]
+    for pid in stale:
+        del matchmaking_pool[pid]
+    # Clear dangling selections
+    for entry in matchmaking_pool.values():
+        if entry["selected"] and entry["selected"] not in matchmaking_pool:
+            entry["selected"] = None
+    # Clean up old pending matches
+    stale_m = [mid for mid, m in pending_matches.items()
+               if now - m["created_at"] > 120]
+    for mid in stale_m:
+        del pending_matches[mid]
 
 # ── Supabase Leaderboard ────────────────────────────────────────────────────
 
@@ -117,27 +139,42 @@ def _insert_leaderboard_entry(name, score, total_time, mode="fun"):
 recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
 
 
-def generate_room_code():
-    """Generate a unique 4-letter room code."""
-    while True:
-        code = ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ', k=4))
-        if code not in rooms:
-            return code
 
-
-def new_game(mode="fun"):
+def new_game(mode="fun", mode2=None):
     game_id = str(uuid.uuid4())[:8]
-    questions_pool = QUESTION_BANKS.get(mode, QUESTION_BANKS["fun"])
+    mixed = bool(mode2 and mode2 != mode)
+
     # Exclude questions used in the last 2 games
     excluded = set()
     for s in recent_question_indices:
         excluded |= s
-    eligible = [(i, q) for i, q in enumerate(questions_pool) if i not in excluded]
-    if len(eligible) < TOTAL_ROUNDS:
-        eligible = list(enumerate(questions_pool))  # fallback: use all
-    chosen = random.sample(eligible, min(TOTAL_ROUNDS, len(eligible)))
-    recent_question_indices.append({i for i, q in chosen})
-    questions = [q for i, q in chosen]
+
+    if mixed:
+        # Draw 5 from each category
+        pool1 = QUESTION_BANKS.get(mode, QUESTION_BANKS["fun"])
+        pool2 = QUESTION_BANKS.get(mode2, QUESTION_BANKS["fun"])
+        eligible1 = [(i, q) for i, q in enumerate(pool1) if f"{mode}:{i}" not in excluded]
+        eligible2 = [(i, q) for i, q in enumerate(pool2) if f"{mode2}:{i}" not in excluded]
+        if len(eligible1) < 5:
+            eligible1 = list(enumerate(pool1))
+        if len(eligible2) < 5:
+            eligible2 = list(enumerate(pool2))
+        chosen1 = random.sample(eligible1, min(5, len(eligible1)))
+        chosen2 = random.sample(eligible2, min(5, len(eligible2)))
+        recent_question_indices.append(
+            {f"{mode}:{i}" for i, q in chosen1} | {f"{mode2}:{i}" for i, q in chosen2}
+        )
+        questions = [q for i, q in chosen1] + [q for i, q in chosen2]
+        random.shuffle(questions)
+    else:
+        questions_pool = QUESTION_BANKS.get(mode, QUESTION_BANKS["fun"])
+        eligible = [(i, q) for i, q in enumerate(questions_pool) if f"{mode}:{i}" not in excluded]
+        if len(eligible) < TOTAL_ROUNDS:
+            eligible = list(enumerate(questions_pool))
+        chosen = random.sample(eligible, min(TOTAL_ROUNDS, len(eligible)))
+        recent_question_indices.append({f"{mode}:{i}" for i, q in chosen})
+        questions = [q for i, q in chosen]
+
     # Shuffle choices for each question
     for q in questions:
         choices_key = "choices" if "choices" in q else "options"
@@ -159,32 +196,13 @@ def new_game(mode="fun"):
         "round_results": [],    # list of per-round summaries
         "last_poll": {},        # player_id -> timestamp of last poll
         "created_at": time.time(),
-        "room_code": None,      # set when game is created via room system
         "mode": mode,
+        "mode2": mode2 if mixed else None,
+        "mixed": mixed,
     }
     games[game_id] = game
     return game
 
-
-def is_waiting_game_stale(game):
-    """Check if a waiting game's only player has stopped polling."""
-    if game["state"] != "waiting":
-        return False
-    if not game["player_order"]:
-        return True
-    pid = game["player_order"][0]
-    last = game["last_poll"].get(pid, game["created_at"])
-    return time.time() - last > STALE_TIMEOUT
-
-
-def cleanup_stale_rooms():
-    """Remove room codes for stale waiting games."""
-    stale_codes = [code for code, gid in rooms.items()
-                   if gid not in games or is_waiting_game_stale(games[gid])]
-    for code in stale_codes:
-        gid = rooms.pop(code, None)
-        if gid and gid in games:
-            del games[gid]
 
 
 def get_safe_state(game, player_id):
@@ -209,12 +227,13 @@ def get_safe_state(game, player_id):
         "opponent_score": opponent.get("score", 0),
         "round_results": g["round_results"],
         "mode": g.get("mode", "fun"),
-        "mode_name": MODE_NAMES.get(g.get("mode", "fun"), "Fun"),
+        "mode_name": (
+            f"{MODE_NAMES.get(g['mode'], 'Fun')} + {MODE_NAMES.get(g.get('mode2', ''), '')}"
+            if g.get("mixed")
+            else MODE_NAMES.get(g.get("mode", "fun"), "Fun")
+        ),
         "computer": bool(g.get("computer_player_id")),
     }
-
-    if g["state"] == "waiting" and g.get("room_code"):
-        state["room_code"] = g["room_code"]
 
     if g["state"] == "lobby":
         state["your_ready"] = player_id in g["ready"]
@@ -306,6 +325,8 @@ def advance_round(game):
 
 def _update_leaderboard(game):
     """Add players from a finished game to the Supabase leaderboard."""
+    if game.get("mixed"):
+        return
     mode = game.get("mode", "fun")
     cpu_id = game.get("computer_player_id")
     for pid in game["player_order"]:
@@ -430,7 +451,8 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 "supabase_key_set": bool(SUPABASE_KEY),
                 "supabase_url_prefix": SUPABASE_URL[:30] + "..." if SUPABASE_URL else "",
                 "active_games": len(games),
-                "active_rooms": len(rooms),
+                "pool_players": len(matchmaking_pool),
+                "pending_matches": len(pending_matches),
             }
             # Try a test read
             if SUPABASE_URL and SUPABASE_KEY:
@@ -459,6 +481,89 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 self._json_response(get_safe_state(game, player_id))
             return
 
+        if path == "/api/pool/state":
+            params = urllib.parse.parse_qs(parsed.query)
+            player_id = params.get("player_id", [None])[0]
+            if not player_id:
+                self._json_response({"error": "Missing player_id"}, 400)
+                return
+            with game_lock:
+                cleanup_stale_pool()
+
+                # Check if player is in the pool
+                if player_id in matchmaking_pool:
+                    entry = matchmaking_pool[player_id]
+                    entry["last_poll"] = time.time()
+
+                    # Check for mutual selection
+                    my_sel = entry["selected"]
+                    if my_sel and my_sel in matchmaking_pool and matchmaking_pool[my_sel]["selected"] == player_id:
+                        # Mutual match! Create pending match
+                        other = matchmaking_pool[my_sel]
+                        match_id = "m_" + str(uuid.uuid4())[:8]
+                        pending_matches[match_id] = {
+                            "players": {
+                                player_id: {"name": entry["name"], "category": None},
+                                my_sel: {"name": other["name"], "category": None},
+                            },
+                            "created_at": time.time(),
+                            "game_id": None,
+                        }
+                        del matchmaking_pool[player_id]
+                        del matchmaking_pool[my_sel]
+                        self._json_response({
+                            "status": "matched",
+                            "match_id": match_id,
+                            "opponent_name": other["name"],
+                        })
+                        return
+
+                    # Build player list
+                    players = []
+                    for pid, e in matchmaking_pool.items():
+                        if pid == player_id:
+                            continue
+                        players.append({
+                            "player_id": pid,
+                            "name": e["name"],
+                            "selected_you": e["selected"] == player_id,
+                        })
+                    self._json_response({
+                        "status": "selecting",
+                        "players": players,
+                        "your_selection": entry["selected"],
+                    })
+                    return
+
+                # Check if player is in a pending match
+                for mid, match in pending_matches.items():
+                    if player_id in match["players"]:
+                        match["players"][player_id]["last_poll"] = time.time()
+                        # Game already created?
+                        if match.get("game_id"):
+                            self._json_response({
+                                "status": "game_ready",
+                                "game_id": match["game_id"],
+                                "player_id": player_id,
+                            })
+                            return
+                        # Get opponent info
+                        opp_id = [p for p in match["players"] if p != player_id][0]
+                        opp = match["players"][opp_id]
+                        my_cat = match["players"][player_id].get("category")
+                        opp_ready = opp.get("category") is not None
+                        self._json_response({
+                            "status": "category_select",
+                            "match_id": mid,
+                            "opponent_name": opp["name"],
+                            "your_category": my_cat,
+                            "opponent_ready": opp_ready,
+                        })
+                        return
+
+                self._json_response({"error": "Not in pool"}, 404)
+            return
+
         # Serve static files
         safe = path.lstrip("/")
         filepath = os.path.join(PUBLIC_DIR, safe)
@@ -485,65 +590,93 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             data = {}
 
+        if path == "/api/pool/join":
+            name = data.get("name", "Player")[:20].strip() or "Player"
+            player_id = str(uuid.uuid4())[:8]
+            with game_lock:
+                cleanup_stale_pool()
+                matchmaking_pool[player_id] = {
+                    "name": name,
+                    "selected": None,
+                    "last_poll": time.time(),
+                    "joined_at": time.time(),
+                }
+            self._json_response({"player_id": player_id})
+            return
+
+        if path == "/api/pool/select":
+            player_id = data.get("player_id")
+            selected_id = data.get("selected_id")
+            with game_lock:
+                if player_id not in matchmaking_pool:
+                    self._json_response({"error": "Not in pool"}, 404)
+                    return
+                if selected_id and (selected_id == player_id or selected_id not in matchmaking_pool):
+                    self._json_response({"error": "Invalid selection"}, 400)
+                    return
+                matchmaking_pool[player_id]["selected"] = selected_id
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/pool/category":
+            player_id = data.get("player_id")
+            match_id = data.get("match_id")
+            category = data.get("category", "fun").strip().lower()
+            if category not in QUESTION_BANKS:
+                category = "fun"
+            with game_lock:
+                if match_id not in pending_matches:
+                    self._json_response({"error": "Match not found"}, 404)
+                    return
+                match = pending_matches[match_id]
+                if player_id not in match["players"]:
+                    self._json_response({"error": "Not in this match"}, 400)
+                    return
+                match["players"][player_id]["category"] = category
+                # Check if both categories submitted
+                cats = [p["category"] for p in match["players"].values()]
+                if all(cats):
+                    pids = list(match["players"].keys())
+                    game = new_game(cats[0], cats[1])
+                    for pid in pids:
+                        pname = match["players"][pid]["name"]
+                        game["players"][pid] = {"name": pname, "score": 0, "total_time": 0.0}
+                        game["player_order"].append(pid)
+                    game["state"] = "lobby"
+                    match["game_id"] = game["id"]
+            self._json_response({"ok": True})
+            return
+
         if path == "/api/join":
             name = data.get("name", "Player")[:20].strip() or "Player"
-            room_code = data.get("room_code", "").strip().upper()
             mode = data.get("mode", "fun").strip().lower()
             if mode not in QUESTION_BANKS:
                 mode = "fun"
             player_id = str(uuid.uuid4())[:8]
-
             computer = data.get("computer", "").strip().lower()
 
+            if not computer or computer not in COMPUTER_OPPONENTS:
+                self._json_response({"error": "Invalid request"}, 400)
+                return
+
             with game_lock:
-                cleanup_stale_rooms()
-
-                if computer and computer in COMPUTER_OPPONENTS:
-                    # Create a game vs computer
-                    config = COMPUTER_OPPONENTS[computer]
-                    game = new_game(mode)
-                    game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
-                    game["player_order"].append(player_id)
-                    cpu_id = "cpu_" + str(uuid.uuid4())[:8]
-                    game["players"][cpu_id] = {"name": config["name"], "score": 0, "total_time": 0.0}
-                    game["player_order"].append(cpu_id)
-                    game["computer_player_id"] = cpu_id
-                    _generate_computer_answers(game, computer)
-                    game["state"] = "lobby"
-                    game["ready"][cpu_id] = True
-                    self._json_response({
-                        "game_id": game["id"],
-                        "player_id": player_id,
-                        "mode": mode,
-                        "computer": True,
-                    })
-                    return
-
-                if room_code:
-                    # Join an existing room
-                    if room_code not in rooms:
-                        self._json_response({"error": "Room not found. Check the code and try again."}, 404)
-                        return
-                    game_id = rooms[room_code]
-                    if game_id not in games or games[game_id]["state"] != "waiting":
-                        del rooms[room_code]
-                        self._json_response({"error": "Room is no longer available."}, 404)
-                        return
-                    game = games[game_id]
-                    game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
-                    game["player_order"].append(player_id)
-                    game["state"] = "lobby"
-                    del rooms[room_code]
-                    self._json_response({"game_id": game_id, "player_id": player_id, "mode": game.get("mode", "fun")})
-                else:
-                    # Create a new game with a room code
-                    game = new_game(mode)
-                    code = generate_room_code()
-                    game["room_code"] = code
-                    game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
-                    game["player_order"].append(player_id)
-                    rooms[code] = game["id"]
-                    self._json_response({"game_id": game["id"], "player_id": player_id, "room_code": code, "mode": mode})
+                config = COMPUTER_OPPONENTS[computer]
+                game = new_game(mode)
+                game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0}
+                game["player_order"].append(player_id)
+                cpu_id = "cpu_" + str(uuid.uuid4())[:8]
+                game["players"][cpu_id] = {"name": config["name"], "score": 0, "total_time": 0.0}
+                game["player_order"].append(cpu_id)
+                game["computer_player_id"] = cpu_id
+                _generate_computer_answers(game, computer)
+                game["state"] = "lobby"
+                game["ready"][cpu_id] = True
+                self._json_response({
+                    "game_id": game["id"],
+                    "player_id": player_id,
+                    "mode": mode,
+                    "computer": True,
+                })
             return
 
         if path == "/api/rejoin":
