@@ -13,6 +13,7 @@ import random
 import threading
 import time
 import urllib.parse
+import urllib.request
 import uuid
 
 # ── Question Bank ────────────────────────────────────────────────────────────
@@ -909,25 +910,44 @@ rooms = {}       # room_code -> game_id (for games waiting for player 2)
 game_lock = threading.Lock()  # protects games/rooms from concurrent access
 STALE_TIMEOUT = 30  # seconds before a waiting game is considered abandoned
 
-LEADERBOARD_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leaderboard.json")
+# ── Supabase Leaderboard ────────────────────────────────────────────────────
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+
+
+def _supabase_headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+    }
 
 
 def _load_leaderboard():
-    """Load leaderboard from disk."""
+    """Load top 10 from Supabase, sorted by score desc then time asc."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return []
     try:
-        with open(LEADERBOARD_FILE, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+        url = f"{SUPABASE_URL}/rest/v1/leaderboard?select=name,score,total_time&order=score.desc,total_time.asc&limit=10"
+        req = urllib.request.Request(url, headers=_supabase_headers())
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
+    except Exception:
         return []
 
 
-def _save_leaderboard(lb):
-    """Save leaderboard to disk."""
-    with open(LEADERBOARD_FILE, "w") as f:
-        json.dump(lb, f)
-
-
-leaderboard = _load_leaderboard()
+def _insert_leaderboard_entry(name, score, total_time):
+    """Insert a single entry into the Supabase leaderboard."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/leaderboard"
+        data = json.dumps({"name": name, "score": score, "total_time": total_time}).encode()
+        req = urllib.request.Request(url, data=data, headers=_supabase_headers(), method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
 recent_question_indices = collections.deque(maxlen=2)  # last 2 games' question index sets
 
 
@@ -1112,21 +1132,10 @@ def advance_round(game):
 
 
 def _update_leaderboard(game):
-    """Add players from a finished game to the leaderboard if they qualify."""
-    import datetime
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    """Add players from a finished game to the Supabase leaderboard."""
     for pid in game["player_order"]:
         p = game["players"][pid]
-        entry = {
-            "name": p["name"],
-            "total_time": round(p["total_time"], 1),
-            "score": p["score"],
-            "date": date_str,
-        }
-        leaderboard.append(entry)
-    leaderboard.sort(key=lambda e: (-e["score"], e["total_time"]))
-    del leaderboard[10:]  # keep only top 10
-    _save_leaderboard(leaderboard)
+        _insert_leaderboard_entry(p["name"], p["score"], round(p["total_time"], 1))
 
 
 def next_round_if_ready(game):
@@ -1188,7 +1197,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
             return
 
         if path == "/api/leaderboard":
-            self._json_response(leaderboard)
+            self._json_response(_load_leaderboard())
             return
 
         if path == "/api/state":
