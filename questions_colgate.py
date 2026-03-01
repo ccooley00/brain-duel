@@ -1,0 +1,316 @@
+QUESTIONS = [
+    # ── Founding & History ──
+    {
+        "category": "Colgate University",
+        "question": "In what year was Colgate University chartered, the date generally accepted as its founding?",
+        "choices": ["1817", "1819", "1823", "1846"],
+        "answer": "1819",
+    },
+    {
+        "category": "Colgate University",
+        "question": "According to Colgate tradition, how many men gathered to found the institution?",
+        "choices": ["7", "9", "13", "17"],
+        "answer": "13",
+    },
+    {
+        "category": "Colgate University",
+        "question": "How much money did each of the founders reportedly contribute when establishing the Baptist Education Society?",
+        "choices": ["$7", "$13", "$50", "$100"],
+        "answer": "$13",
+    },
+    {
+        "category": "Colgate University",
+        "question": "How many prayers did the founders reportedly offer at the founding of the institution that became Colgate?",
+        "choices": ["7", "10", "13", "21"],
+        "answer": "13",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Before becoming Colgate University in 1890, the school was known as what?",
+        "choices": ["Hamilton College", "Madison University", "Central New York Seminary", "Baptist University of New York"],
+        "answer": "Madison University",
+    },
+    {
+        "category": "Colgate University",
+        "question": "The university was renamed 'Colgate University' in 1890 in recognition of which family's decades of financial support?",
+        "choices": ["The Hamilton family", "The Madison family", "The Colgate family", "The Olmstead family"],
+        "answer": "The Colgate family",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What was the name of the institution when instruction began in 1820?",
+        "choices": ["Colgate Seminary", "Hamilton Literary and Theological Institution", "Madison Baptist College", "Central New York Academy"],
+        "answer": "Hamilton Literary and Theological Institution",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is the Latin motto on Colgate University's seal?",
+        "choices": ["Lux et Veritas", "Deo ac Veritati", "Veritas et Lux", "In Deo Speramus"],
+        "answer": "Deo ac Veritati",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What does Colgate's motto 'Deo ac Veritati' mean in English?",
+        "choices": ["Light and Truth", "For God and Truth", "Knowledge and Virtue", "Strength and Honor"],
+        "answer": "For God and Truth",
+    },
+    {
+        "category": "Colgate University",
+        "question": "How many letters are in Colgate's Latin motto 'Deo ac Veritati,' continuing the university's lucky number tradition?",
+        "choices": ["11", "12", "13", "14"],
+        "answer": "13",
+    },
+    # ── Location & Campus ──
+    {
+        "category": "Colgate University",
+        "question": "In which village is Colgate University located?",
+        "choices": ["Hamilton, NY", "Colgate, NY", "Madison, NY", "Syracuse, NY"],
+        "answer": "Hamilton, NY",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What county in New York State is Colgate University situated in?",
+        "choices": ["Chenango County", "Oneida County", "Madison County", "Hamilton County"],
+        "answer": "Madison County",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Approximately how many acres does Colgate University's campus cover?",
+        "choices": ["175 acres", "350 acres", "575 acres", "1,000 acres"],
+        "answer": "575 acres",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Colgate's campus is often referred to as being situated on what geographic feature?",
+        "choices": ["The Valley", "The Hill", "The Plain", "The Ridge"],
+        "answer": "The Hill",
+    },
+    {
+        "category": "Colgate University",
+        "question": "In which geographic valley of central New York is Colgate University situated?",
+        "choices": ["Mohawk Valley", "Hudson Valley", "Chenango Valley", "Genesee Valley"],
+        "answer": "Chenango Valley",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Which building is the oldest structure on the Colgate campus, built in 1827 using stone from a quarry on the property?",
+        "choices": ["Memorial Chapel", "West Hall", "Alumni Hall", "James C. Colgate Hall"],
+        "answer": "West Hall",
+    },
+    {
+        "category": "Colgate University",
+        "question": "According to campus legend, what will happen to a couple who shares their first kiss on the Willow Path bridge?",
+        "choices": ["They will ace their exams", "They will return to Colgate someday", "They are destined to marry", "They will have good luck for a year"],
+        "answer": "They are destined to marry",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Which Colgate mathematics professor initiated the campus beautification efforts that created Taylor Lake and the Willow Path?",
+        "choices": ["James Taylor", "William Hamilton", "George Cutten", "Daniel Hascall"],
+        "answer": "James Taylor",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is Chapel House at Colgate University primarily used for?",
+        "choices": ["Classrooms and lectures", "Interfaith spiritual community and retreat", "Administrative offices", "Student dormitory"],
+        "answer": "Interfaith spiritual community and retreat",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is the name of the historic inn in the village of Hamilton that has deep ties to Colgate University?",
+        "choices": ["The Hamilton Hotel", "The Colgate Inn", "The Raiders Lodge", "The Maroon House"],
+        "answer": "The Colgate Inn",
+    },
+    # ── School Colors, Mascot & Athletics ──
+    {
+        "category": "Colgate University",
+        "question": "What are Colgate University's official school colors?",
+        "choices": ["Red and white", "Maroon and white", "Orange and black", "Crimson and gold"],
+        "answer": "Maroon and white",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is the nickname of Colgate University's athletic teams?",
+        "choices": ["Red Raiders", "Maroons", "Raiders", "Crusaders"],
+        "answer": "Raiders",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Before 2001, what was the full nickname of Colgate's athletic teams?",
+        "choices": ["Maroon Raiders", "Red Raiders", "Crimson Raiders", "Colgate Chargers"],
+        "answer": "Red Raiders",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What athletic conference does Colgate University belong to for most sports?",
+        "choices": ["Ivy League", "Patriot League", "Colonial Athletic Association", "America East"],
+        "answer": "Patriot League",
+    },
+    {
+        "category": "Colgate University",
+        "question": "In what conference do Colgate's men's and women's ice hockey teams compete?",
+        "choices": ["Hockey East", "NCHC", "ECAC Hockey", "Atlantic Hockey"],
+        "answer": "ECAC Hockey",
+    },
+    {
+        "category": "Colgate University",
+        "question": "The 1932 Colgate football team is famously described as 'undefeated, untied, unscored upon, and ___.' What is the fourth word?",
+        "choices": ["Unmatched", "Uninvited", "Unprecedented", "Unrivaled"],
+        "answer": "Uninvited",
+    },
+    {
+        "category": "Colgate University",
+        "question": "To which bowl game was the legendary 1932 Colgate football team famously NOT invited despite their perfect 9-0 season?",
+        "choices": ["Orange Bowl", "Cotton Bowl", "Sugar Bowl", "Rose Bowl"],
+        "answer": "Rose Bowl",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What was the combined score margin of Colgate's 1932 undefeated football season?",
+        "choices": ["150-0", "200-0", "264-0", "300-0"],
+        "answer": "264-0",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Who coached the legendary 1932 undefeated Colgate football team?",
+        "choices": ["Dick Biddle", "Andy Kerr", "Fred Dunlap", "Alva Kelley"],
+        "answer": "Andy Kerr",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Colgate's football stadium is named after which legendary coach?",
+        "choices": ["Dick Biddle", "Andy Kerr", "Fred Dunlap", "Sam Ingram"],
+        "answer": "Andy Kerr",
+    },
+    {
+        "category": "Colgate University",
+        "question": "In 2003, Colgate's football team reached the NCAA Division I-AA championship game. Who defeated them?",
+        "choices": ["Delaware", "Appalachian State", "Montana", "Villanova"],
+        "answer": "Delaware",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is the name of Colgate's ice hockey arena that opened in 2016, replacing Starr Rink?",
+        "choices": ["Starr Rink", "Class of 1965 Arena", "Reid Ice Center", "Cotterell Arena"],
+        "answer": "Class of 1965 Arena",
+    },
+    # ── Rivalries ──
+    {
+        "category": "Colgate University",
+        "question": "Which university, located about 38 miles away, is Colgate's most historic football rival?",
+        "choices": ["Cornell", "Syracuse", "Army", "Bucknell"],
+        "answer": "Syracuse",
+    },
+    # ── Traditions ──
+    {
+        "category": "Colgate University",
+        "question": "What is the Senior Torchlight Procession at Colgate?",
+        "choices": ["A bonfire on the quad", "Seniors carry torches down the hill before graduation", "A candlelight dinner for seniors", "A fireworks display at commencement"],
+        "answer": "Seniors carry torches down the hill before graduation",
+    },
+    {
+        "category": "Colgate University",
+        "question": "In what year was the Senior Torchlight Procession first performed at Colgate?",
+        "choices": ["1890", "1910", "1930", "1950"],
+        "answer": "1930",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What number is considered lucky at Colgate University?",
+        "choices": ["7", "11", "13", "21"],
+        "answer": "13",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Every Friday the 13th is celebrated at Colgate as what?",
+        "choices": ["Founders Day", "Colgate Day", "Maroon Day", "Raider Day"],
+        "answer": "Colgate Day",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What unusual speed limit is enforced on Colgate's campus, reflecting the university's lucky number?",
+        "choices": ["13 mph", "13 km/h", "31 mph", "10 mph"],
+        "answer": "13 mph",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is the official address of Colgate University, reflecting its lucky number?",
+        "choices": ["13 Oak Drive", "13 Broad Street", "13 College Avenue", "13 University Place"],
+        "answer": "13 Oak Drive",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Which Colgate team is credited with starting the American college spring break tradition in 1936 by traveling to Fort Lauderdale, Florida?",
+        "choices": ["Football team", "Swim team", "Baseball team", "Track team"],
+        "answer": "Swim team",
+    },
+    # ── The Colgate Thirteen & A Cappella ──
+    {
+        "category": "Colgate University",
+        "question": "What is the Colgate Thirteen?",
+        "choices": ["A secret society", "An all-male a cappella singing group", "A fraternity", "A student government council"],
+        "answer": "An all-male a cappella singing group",
+    },
+    {
+        "category": "Colgate University",
+        "question": "The Colgate Thirteen holds the distinction of being the oldest collegiate all-male a cappella group in which country?",
+        "choices": ["Canada", "United Kingdom", "United States", "Australia"],
+        "answer": "United States",
+    },
+    {
+        "category": "Colgate University",
+        "question": "In what year was the Colgate Thirteen a cappella group officially founded?",
+        "choices": ["1932", "1942", "1952", "1962"],
+        "answer": "1942",
+    },
+    {
+        "category": "Colgate University",
+        "question": "What is the name of Colgate's all-female a cappella group, founded in 1974?",
+        "choices": ["The Resolutions", "The Swinging 'Gates", "The Colgate Thirteen", "The Dischords"],
+        "answer": "The Swinging 'Gates",
+    },
+    # ── Famous Alumni ──
+    {
+        "category": "Colgate University",
+        "question": "Which Colgate alumnus from the Class of 1942 was famous for his commentary segments on CBS's '60 Minutes'?",
+        "choices": ["Walter Cronkite", "Dan Rather", "Andy Rooney", "Mike Wallace"],
+        "answer": "Andy Rooney",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Which future Chief Justice of the United States attended Madison University (now Colgate) before transferring to Brown?",
+        "choices": ["William Howard Taft", "Charles Evans Hughes", "John Marshall", "Earl Warren"],
+        "answer": "Charles Evans Hughes",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Which Colgate alumnus co-founded Ben & Jerry's Ice Cream?",
+        "choices": ["Jerry Greenfield", "Ben Cohen", "Howard Schultz", "Steve Herrell"],
+        "answer": "Ben Cohen",
+    },
+    {
+        "category": "Colgate University",
+        "question": "Which famous cartoonist and creator of 'The Addams Family' attended Colgate University?",
+        "choices": ["Gary Larson", "Charles Addams", "Bill Watterson", "Jim Davis"],
+        "answer": "Charles Addams",
+    },
+    # ── Colgate-Palmolive Connection ──
+    {
+        "category": "Colgate University",
+        "question": "What is the relationship between Colgate University and Colgate-Palmolive, the consumer products company?",
+        "choices": [
+            "Colgate-Palmolive founded the university",
+            "The university manufactures toothpaste on campus",
+            "Both are named after the same Colgate family but are separate entities",
+            "There is no connection whatsoever",
+        ],
+        "answer": "Both are named after the same Colgate family but are separate entities",
+    },
+    # ── Student Life & Academics ──
+    {
+        "category": "Colgate University",
+        "question": "What is the name of the student newspaper at Colgate, which claims to be the oldest college weekly in America?",
+        "choices": ["The Colgate Tribune", "The Hamilton Herald", "The Colgate Maroon-News", "The Raider Review"],
+        "answer": "The Colgate Maroon-News",
+    },
+]

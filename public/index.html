@@ -350,6 +350,73 @@
     margin-top: 4px;
   }
 
+  /* ── Mode Selector ── */
+  .mode-selector {
+    margin-bottom: 16px;
+  }
+  .mode-selector label {
+    display: block;
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  .mode-selector select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #334155;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1.05rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  .mode-selector select:focus { border-color: var(--accent); }
+
+  .mode-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* ── Leaderboard Mode Tabs ── */
+  .lb-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    justify-content: center;
+  }
+  .lb-tab {
+    padding: 6px 12px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lb-tab:hover { border-color: var(--accent); color: var(--text); }
+  .lb-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-weight: 600;
+  }
+
   @media (max-width: 500px) {
     h1 { font-size: 1.8rem; }
     .choices { grid-template-columns: 1fr; }
@@ -371,6 +438,16 @@
         <label style="display:block;text-align:left;color:var(--muted);font-size:0.9rem;margin-bottom:6px;">Your Name</label>
         <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autofocus>
         <p id="name-error" style="color:var(--red);margin-top:4px;margin-bottom:4px;display:none;font-size:0.9rem;">Please enter your name first!</p>
+        <div class="mode-selector">
+          <label>Game Mode</label>
+          <select id="mode-select">
+            <option value="fun">Fun</option>
+            <option value="nyc">NYC History</option>
+            <option value="gaming">Gaming</option>
+            <option value="colgate">Colgate University</option>
+            <option value="cooleys">History of Cooleys</option>
+          </select>
+        </div>
         <div style="display:flex;gap:12px;margin-top:16px;">
           <button class="btn btn-primary" style="flex:1;" id="create-btn" onclick="createGame()">Create Game</button>
           <button class="btn btn-green" style="flex:1;" id="show-join-btn" onclick="showJoinCode()">Join Game</button>
@@ -383,12 +460,18 @@
       </div>
       <div style="text-align:center;margin-top:20px;">
         <p style="color:var(--muted);font-size:0.85rem;">
-          10 rounds &middot; Math, Logic, Words, Trivia &amp; Picture Rounds<br>
-          Answer fast for bonus points!
+          10 rounds &middot; Choose your category &middot; Answer fast for bonus points!
         </p>
       </div>
       <div class="leaderboard-box" id="leaderboard-join">
-        <h3>Fastest Times Leaderboard</h3>
+        <h3>Leaderboard</h3>
+        <div class="lb-tabs" id="lb-tabs-join">
+          <button class="lb-tab active" data-mode="fun" onclick="switchLeaderboardTab('join','fun')">Fun</button>
+          <button class="lb-tab" data-mode="nyc" onclick="switchLeaderboardTab('join','nyc')">NYC</button>
+          <button class="lb-tab" data-mode="gaming" onclick="switchLeaderboardTab('join','gaming')">Gaming</button>
+          <button class="lb-tab" data-mode="colgate" onclick="switchLeaderboardTab('join','colgate')">Colgate</button>
+          <button class="lb-tab" data-mode="cooleys" onclick="switchLeaderboardTab('join','cooleys')">Cooleys</button>
+        </div>
         <div id="lb-content"><p class="lb-empty">Loading...</p></div>
       </div>
     </div>
@@ -398,6 +481,7 @@
       <div class="waiting-box">
         <div class="spinner"></div>
         <h2>Waiting for opponent...</h2>
+        <div class="mode-badge" id="waiting-mode-badge">Fun</div>
         <p style="color:var(--muted);margin-top:12px;">Share this code with your friend:</p>
         <p id="room-code-display" style="font-size:3rem;font-weight:700;letter-spacing:12px;color:var(--accent);margin:16px 0;"></p>
         <button class="btn btn-primary" style="font-size:0.9rem;padding:10px 20px;" onclick="copyRoomCode()">Copy Code</button>
@@ -409,7 +493,8 @@
     <div id="screen-lobby" class="screen">
       <div class="lobby-box">
         <h2 style="margin-bottom:4px;">Get Ready!</h2>
-        <p style="color:var(--muted);margin-bottom:8px;">Both players must confirm to start</p>
+        <div class="mode-badge" id="lobby-mode-badge">Fun</div>
+        <p style="color:var(--muted);margin-bottom:8px;margin-top:8px;">Both players must confirm to start</p>
         <div class="lobby-players">
           <div class="lobby-player you" id="lobby-you">You</div>
           <div class="lobby-vs">VS</div>
@@ -492,7 +577,14 @@
         </div>
         <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
         <div class="leaderboard-box" id="leaderboard-gameover" style="margin-top:20px;">
-          <h3>Fastest Times Leaderboard</h3>
+          <h3>Leaderboard</h3>
+          <div class="lb-tabs" id="lb-tabs-gameover">
+            <button class="lb-tab active" data-mode="fun" onclick="switchLeaderboardTab('gameover','fun')">Fun</button>
+            <button class="lb-tab" data-mode="nyc" onclick="switchLeaderboardTab('gameover','nyc')">NYC</button>
+            <button class="lb-tab" data-mode="gaming" onclick="switchLeaderboardTab('gameover','gaming')">Gaming</button>
+            <button class="lb-tab" data-mode="colgate" onclick="switchLeaderboardTab('gameover','colgate')">Colgate</button>
+            <button class="lb-tab" data-mode="cooleys" onclick="switchLeaderboardTab('gameover','cooleys')">Cooleys</button>
+          </div>
           <div id="lb-gameover-content"><p class="lb-empty">Loading...</p></div>
         </div>
         <div class="history" id="go-history"></div>
@@ -508,6 +600,15 @@
   let currentScreen = 'join';
   let lastState = null;
   let pollInterval = 1000;
+  let gameMode = 'fun';
+
+  const MODE_NAMES = {
+    fun: 'Fun',
+    nyc: 'NYC History',
+    gaming: 'Gaming',
+    colgate: 'Colgate University',
+    cooleys: 'History of Cooleys',
+  };
 
   const $ = id => document.getElementById(id);
 
@@ -595,15 +696,17 @@
     $('create-btn').textContent = 'Creating...';
 
     try {
+      const mode = $('mode-select').value;
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: API_HEADERS,
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, mode }),
       });
       const data = await res.json();
       gameId = data.game_id;
       playerId = data.player_id;
       roomCode = data.room_code;
+      gameMode = data.mode || mode;
       saveName(name);
       saveSession();
 
@@ -651,6 +754,7 @@
       }
       gameId = data.game_id;
       playerId = data.player_id;
+      gameMode = data.mode || 'fun';
       saveName(name);
       saveSession();
 
@@ -695,6 +799,9 @@
   }
 
   function render(s) {
+    // Track mode from server state
+    if (s.mode) gameMode = s.mode;
+
     // Adjust poll speed: fast while waiting/lobby, normal during gameplay
     const desiredInterval = (s.state === 'waiting' || s.state === 'lobby') ? 500 : 1000;
     if (pollInterval !== desiredInterval) {
@@ -704,6 +811,7 @@
 
     if (s.state === 'waiting') {
       if (currentScreen !== 'waiting') showScreen('waiting');
+      $('waiting-mode-badge').textContent = s.mode_name || MODE_NAMES[gameMode] || 'Fun';
       if (s.room_code) {
         roomCode = s.room_code;
         $('room-code-display').textContent = s.room_code;
@@ -713,6 +821,7 @@
 
     if (s.state === 'lobby') {
       showScreen('lobby');
+      $('lobby-mode-badge').textContent = s.mode_name || MODE_NAMES[gameMode] || 'Fun';
       $('lobby-you').textContent = s.your_name;
       $('lobby-opp').textContent = s.opponent_name;
       const btn = $('lobby-begin-btn');
@@ -838,7 +947,8 @@
       $('go-opp-score').textContent = s.opponent_score;
       $('go-opp-time').textContent = s.opponent_total_time + 's total';
 
-      fetchLeaderboard('lb-gameover-content');
+      // Set active tab to current game mode and fetch leaderboard
+      switchLeaderboardTab('gameover', gameMode);
 
       if (s.outcome === 'win') {
         $('go-icon').innerHTML = '&#127942;';
@@ -899,9 +1009,10 @@
     }
   }
 
-  async function fetchLeaderboard(targetId) {
+  async function fetchLeaderboard(targetId, mode) {
+    mode = mode || 'fun';
     try {
-      const res = await fetch('/api/leaderboard', {
+      const res = await fetch('/api/leaderboard?mode=' + encodeURIComponent(mode), {
         headers: { 'ngrok-skip-browser-warning': 'true' },
       });
       const data = await res.json();
@@ -926,8 +1037,21 @@
     }
   }
 
+  function switchLeaderboardTab(section, mode) {
+    // Update tab styling
+    const tabs = $('lb-tabs-' + section);
+    if (tabs) {
+      tabs.querySelectorAll('.lb-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.mode === mode);
+      });
+    }
+    // Fetch leaderboard for selected mode
+    const contentId = section === 'join' ? 'lb-content' : 'lb-' + section + '-content';
+    fetchLeaderboard(contentId, mode);
+  }
+
   // Load leaderboard on page load
-  fetchLeaderboard('lb-content');
+  fetchLeaderboard('lb-content', 'fun');
 
   async function submitAnswer(choice, btn) {
     document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
