@@ -238,6 +238,12 @@ def get_safe_state(game, player_id):
     if g["state"] == "lobby":
         state["your_ready"] = player_id in g["ready"]
         state["opponent_ready"] = opponent_id in g["ready"] if opponent_id else False
+        # Include per-player category picks for dual-player games
+        pcats = g.get("player_categories")
+        if pcats:
+            state["your_category"] = MODE_NAMES.get(pcats.get(player_id, ""), "")
+            state["opponent_category"] = MODE_NAMES.get(pcats.get(opponent_id, ""), "") if opponent_id else ""
+            state["categories_match"] = (pcats.get(player_id) == pcats.get(opponent_id)) if opponent_id else True
 
     if g["state"] == "active":
         q = g["questions"][g["round"]]
@@ -267,6 +273,10 @@ def get_safe_state(game, player_id):
             state["outcome"] = "tie"
         state["your_total_time"] = round(p.get("total_time", 0), 1)
         state["opponent_total_time"] = round(opponent.get("total_time", 0), 1)
+        # Include leaderboard rank if available
+        ranks = g.get("leaderboard_ranks", {})
+        if player_id in ranks:
+            state["leaderboard_rank"] = ranks[player_id]
 
     return state
 
@@ -323,6 +333,17 @@ def advance_round(game):
         game["round"] += 1
 
 
+def _get_leaderboard_rank(name, score, total_time, mode):
+    """Get a player's rank on the leaderboard (1-indexed), or None if not in top 10."""
+    board = _load_leaderboard(mode)
+    for i, entry in enumerate(board):
+        if (entry["name"] == name
+                and entry["score"] == score
+                and abs(entry["total_time"] - total_time) < 0.5):
+            return i + 1
+    return None
+
+
 def _update_leaderboard(game):
     """Add players from a finished game to the Supabase leaderboard."""
     if game.get("mixed"):
@@ -334,6 +355,15 @@ def _update_leaderboard(game):
             continue
         p = game["players"][pid]
         _insert_leaderboard_entry(p["name"], p["score"], round(p["total_time"], 1), mode)
+    # Compute leaderboard ranks after all inserts
+    game["leaderboard_ranks"] = {}
+    for pid in game["player_order"]:
+        if pid == cpu_id:
+            continue
+        p = game["players"][pid]
+        rank = _get_leaderboard_rank(p["name"], p["score"], round(p["total_time"], 1), mode)
+        if rank:
+            game["leaderboard_ranks"][pid] = rank
 
 
 def _generate_computer_answers(game, difficulty):
@@ -638,10 +668,12 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 if all(cats):
                     pids = list(match["players"].keys())
                     game = new_game(cats[0], cats[1])
-                    for pid in pids:
+                    game["player_categories"] = {}
+                    for i, pid in enumerate(pids):
                         pname = match["players"][pid]["name"]
                         game["players"][pid] = {"name": pname, "score": 0, "total_time": 0.0}
                         game["player_order"].append(pid)
+                        game["player_categories"][pid] = cats[i]
                     game["state"] = "lobby"
                     match["game_id"] = game["id"]
             self._json_response({"ok": True})

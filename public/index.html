@@ -445,10 +445,117 @@
     font-weight: 600;
   }
 
+  /* ── Category Announcement (Lobby) ── */
+  .category-announcement {
+    background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12));
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 14px;
+    padding: 20px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .category-announcement .ca-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .category-picks {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .category-pick {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 10px 18px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .category-pick .cp-name {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .category-pick .cp-category {
+    font-size: 1.05rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .category-picks .cp-divider {
+    font-size: 1.2rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .category-result {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ── Leaderboard Rank Celebration ── */
+  .rank-celebration {
+    background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(245,158,11,0.1));
+    border: 2px solid rgba(234,179,8,0.4);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    text-align: center;
+    animation: rank-glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes rank-glow {
+    from { border-color: rgba(234,179,8,0.3); box-shadow: 0 0 15px rgba(234,179,8,0.1); }
+    to { border-color: rgba(234,179,8,0.7); box-shadow: 0 0 30px rgba(234,179,8,0.25); }
+  }
+  .rank-celebration .rc-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+  .rank-celebration .rc-rank {
+    font-size: 4rem;
+    font-weight: 900;
+    color: var(--yellow);
+    text-shadow: 0 0 20px rgba(234,179,8,0.4);
+    line-height: 1;
+  }
+  .rank-celebration .rc-ordinal {
+    font-size: 1.5rem;
+    vertical-align: super;
+  }
+  .rank-celebration .rc-subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 8px;
+  }
+
+  /* ── Fireworks Canvas ── */
+  #fireworks-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
   @media (max-width: 500px) {
     h1 { font-size: 1.8rem; }
     .choices { grid-template-columns: 1fr; }
     .final-scores { flex-direction: column; gap: 12px; }
+    .category-picks { flex-direction: column; gap: 8px; }
+    .category-picks .cp-divider { display: none; }
+    .rank-celebration .rc-rank { font-size: 3rem; }
   }
 </style>
 </head>
@@ -571,6 +678,11 @@
       <div class="lobby-box">
         <h2 style="margin-bottom:4px;">Get Ready!</h2>
         <div class="mode-badge" id="lobby-mode-badge">Fun</div>
+        <div class="category-announcement" id="lobby-category-announcement" style="display:none;">
+          <div class="ca-title">Categories Selected</div>
+          <div class="category-picks" id="lobby-category-picks"></div>
+          <div class="category-result" id="lobby-category-result"></div>
+        </div>
         <p style="color:var(--muted);margin-bottom:8px;margin-top:8px;">Both players must confirm to start</p>
         <div class="lobby-players">
           <div class="lobby-player you" id="lobby-you">You</div>
@@ -637,6 +749,11 @@
     <!-- GAME OVER SCREEN -->
     <div id="screen-gameover" class="screen">
       <div class="gameover-box">
+        <div class="rank-celebration" id="rank-celebration" style="display:none;">
+          <div class="rc-label">Leaderboard</div>
+          <div class="rc-rank" id="rc-rank-number"></div>
+          <div class="rc-subtitle" id="rc-subtitle"></div>
+        </div>
         <div id="go-icon" style="font-size:3.5rem;margin-bottom:8px;"></div>
         <h2 id="go-title">Game Over</h2>
         <p id="go-subtitle" style="color:var(--muted);margin-top:4px;"></p>
@@ -976,6 +1093,33 @@
       $('lobby-mode-badge').textContent = s.mode_name || MODE_NAMES[gameMode] || 'Fun';
       $('lobby-you').textContent = s.your_name;
       $('lobby-opp').textContent = s.opponent_name;
+
+      // Show category announcement for dual-player games
+      const caBox = $('lobby-category-announcement');
+      if (s.your_category && s.opponent_category) {
+        caBox.style.display = '';
+        $('lobby-mode-badge').style.display = 'none';
+        let picksHtml = `
+          <div class="category-pick">
+            <div class="cp-name">${s.your_name}</div>
+            <div class="cp-category">${s.your_category}</div>
+          </div>
+          <div class="cp-divider">+</div>
+          <div class="category-pick">
+            <div class="cp-name">${s.opponent_name}</div>
+            <div class="cp-category">${s.opponent_category}</div>
+          </div>`;
+        $('lobby-category-picks').innerHTML = picksHtml;
+        if (s.categories_match) {
+          $('lobby-category-result').textContent = '10 questions from ' + s.your_category + '!';
+        } else {
+          $('lobby-category-result').textContent = '5 questions from each category!';
+        }
+      } else {
+        caBox.style.display = 'none';
+        $('lobby-mode-badge').style.display = '';
+      }
+
       const btn = $('lobby-begin-btn');
       if (s.your_ready) {
         btn.disabled = true;
@@ -1102,10 +1246,25 @@
       // Set active tab to current game mode and fetch leaderboard
       switchLeaderboardTab('gameover', gameMode);
 
+      // Leaderboard rank celebration
+      const rankBox = $('rank-celebration');
+      if (s.leaderboard_rank) {
+        rankBox.style.display = '';
+        const rank = s.leaderboard_rank;
+        const ordinal = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+        $('rc-rank-number').innerHTML = '#' + rank + '<span class="rc-ordinal">' + ordinal + '</span>';
+        const modeName = MODE_NAMES[gameMode] || 'Fun';
+        $('rc-subtitle').textContent = 'You placed ' + rank + ordinal + ' on the ' + modeName + ' leaderboard!';
+      } else {
+        rankBox.style.display = 'none';
+      }
+
+      let shouldFireworks = false;
       if (s.outcome === 'win') {
         $('go-icon').innerHTML = '&#127942;';
         $('go-title').innerHTML = '<span class="win-text">You Win!</span>';
         $('go-subtitle').textContent = 'Congratulations, champion!';
+        shouldFireworks = true;
       } else if (s.outcome === 'lose') {
         $('go-icon').innerHTML = '&#128170;';
         $('go-title').innerHTML = '<span class="lose-text">You Lost</span>';
@@ -1114,6 +1273,11 @@
         $('go-icon').innerHTML = '&#129309;';
         $('go-title').innerHTML = '<span class="tie-text">It\'s a Tie!</span>';
         $('go-subtitle').textContent = 'Evenly matched!';
+      }
+      // Also celebrate if player made the leaderboard
+      if (s.leaderboard_rank) shouldFireworks = true;
+      if (shouldFireworks && !document.getElementById('fireworks-canvas')) {
+        launchFireworks(5000);
       }
 
       // Show round history
@@ -1219,6 +1383,130 @@
     } catch (e) {
       // Will sync on next poll
     }
+  }
+
+  // ── Fireworks Animation ──
+  function launchFireworks(duration) {
+    // Remove any existing canvas
+    const old = document.getElementById('fireworks-canvas');
+    if (old) old.remove();
+
+    const canvas = document.createElement('canvas');
+    canvas.id = 'fireworks-canvas';
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const particles = [];
+    const colors = [
+      '#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff',
+      '#5f27cd','#01a3a4','#ff6348','#2ed573','#ffa502',
+      '#f368e0','#00d2d3','#ff9f43','#ee5a24','#7bed9f',
+    ];
+    const startTime = Date.now();
+    let lastBurst = 0;
+
+    function createBurst(x, y) {
+      const count = 40 + Math.random() * 40;
+      const color1 = colors[Math.floor(Math.random() * colors.length)];
+      const color2 = colors[Math.floor(Math.random() * colors.length)];
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 6;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          decay: 0.008 + Math.random() * 0.015,
+          color: Math.random() > 0.5 ? color1 : color2,
+          size: 2 + Math.random() * 3,
+          trail: [],
+        });
+      }
+    }
+
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      if (elapsed > duration) {
+        // Fade out
+        canvas.style.transition = 'opacity 0.5s';
+        canvas.style.opacity = '0';
+        setTimeout(() => canvas.remove(), 500);
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Create new bursts periodically
+      const burstInterval = elapsed < 2000 ? 250 : 500;
+      if (Date.now() - lastBurst > burstInterval) {
+        createBurst(
+          canvas.width * 0.1 + Math.random() * canvas.width * 0.8,
+          canvas.height * 0.05 + Math.random() * canvas.height * 0.45
+        );
+        lastBurst = Date.now();
+      }
+
+      // Update and draw particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        // Store trail position
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > 5) p.trail.shift();
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.06; // gravity
+        p.vx *= 0.99; // air resistance
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        // Draw trail
+        for (let t = 0; t < p.trail.length; t++) {
+          const tp = p.trail[t];
+          const alpha = (t / p.trail.length) * p.life * 0.4;
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(tp.x, tp.y, p.size * p.life * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Draw main particle
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add glow
+        ctx.globalAlpha = p.life * 0.3;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      requestAnimationFrame(animate);
+    }
+
+    // Initial bursts
+    createBurst(canvas.width * 0.3, canvas.height * 0.25);
+    createBurst(canvas.width * 0.7, canvas.height * 0.2);
+    createBurst(canvas.width * 0.5, canvas.height * 0.35);
+    lastBurst = Date.now();
+    animate();
   }
 </script>
 </body>
