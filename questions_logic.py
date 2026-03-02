@@ -205,8 +205,8 @@ QUESTIONS = [
     {
         "category": "Logic",
         "question": "Three switches control three light bulbs in another room. You can only enter the room once. How do you figure out which switch controls which bulb?",
-        "choices": ["Turn all on at once", "Turn on 1, wait, turn on 2, then enter", "It's impossible", "Use a mirror"],
-        "answer": "Turn on 1, wait, turn on 2, then enter",
+        "choices": ["Turn all on at once", "Turn on 1, wait, turn it off, turn on 2, enter", "It's impossible", "Use a mirror"],
+        "answer": "Turn on 1, wait, turn it off, turn on 2, enter",
     },
     {
         "category": "Logic",
@@ -228,9 +228,9 @@ QUESTIONS = [
     },
     {
         "category": "Logic",
-        "question": "A windowless room has 3 light bulbs. Outside are 3 switches. You may enter the room only once. How can you determine which switch controls which bulb using heat?",
-        "choices": ["Turn on all switches", "Turn on switch 1 for 10 min, off, turn on switch 2, enter", "Flip switches randomly", "Impossible without help"],
-        "answer": "Turn on switch 1 for 10 min, off, turn on switch 2, enter",
+        "question": "You have a 3-gallon jug and a 5-gallon jug. How do you measure exactly 4 gallons?",
+        "choices": ["Fill 5, pour into 3, empty 3, pour remainder into 3, fill 5, pour into 3", "Fill both and subtract", "Fill 5 halfway twice", "It's impossible"],
+        "answer": "Fill 5, pour into 3, empty 3, pour remainder into 3, fill 5, pour into 3",
     },
     {
         "category": "Logic",
