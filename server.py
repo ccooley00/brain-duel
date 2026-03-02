@@ -27,6 +27,8 @@ from questions_nyc import QUESTIONS as NYC_QUESTIONS
 from questions_gaming import QUESTIONS as GAMING_QUESTIONS
 from questions_colgate import QUESTIONS as COLGATE_QUESTIONS
 from questions_cooleys import QUESTIONS as COOLEYS_QUESTIONS
+from questions_buildings import QUESTIONS as BUILDINGS_QUESTIONS
+from questions_logic import QUESTIONS as LOGIC_QUESTIONS
 
 QUESTION_BANKS = {
     "fun": FUN_QUESTIONS,
@@ -34,6 +36,8 @@ QUESTION_BANKS = {
     "gaming": GAMING_QUESTIONS,
     "colgate": COLGATE_QUESTIONS,
     "cooleys": COOLEYS_QUESTIONS,
+    "buildings": BUILDINGS_QUESTIONS,
+    "logic": LOGIC_QUESTIONS,
 }
 
 MODE_NAMES = {
@@ -42,6 +46,8 @@ MODE_NAMES = {
     "gaming": "Gaming",
     "colgate": "Colgate University",
     "cooleys": "History of Cooleys",
+    "buildings": "Famous Buildings",
+    "logic": "Logic",
 }
 
 TOTAL_ROUNDS = 10
