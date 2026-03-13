@@ -53,6 +53,7 @@ MODE_NAMES = {
 TOTAL_ROUNDS = 10
 POINTS_CORRECT = 10
 POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
+ROUND_TIMEOUT = 30      # seconds before auto-submitting wrong answer
 
 COMPUTER_OPPONENTS = {
     "hal": {"name": "HAL 9000", "accuracy": 0.30, "min_time": 8.0, "max_time": 15.0},
@@ -64,6 +65,12 @@ COMPUTER_OPPONENTS = {
 
 games = {}       # game_id -> game dict
 game_lock = threading.Lock()  # protects all shared state
+
+# ── Team Mode ──────────────────────────────────────────────────────────────
+
+team_game_state = {"queue": None}  # game_id of active team game being set up
+TEAM_DISCONNECT_TIMEOUT = 10       # seconds before player considered disconnected
+TEAM_RESULT_DISPLAY_TIME = 10      # seconds to show round results in team mode
 
 # ── Matchmaking Pool ─────────────────────────────────────────────────────────
 
@@ -210,6 +217,87 @@ def new_game(mode="fun", mode2=None):
     return game
 
 
+def _get_player_team(game, player_id):
+    """Return 'A' or 'B' for the player's team, or None."""
+    for team_key in ("A", "B"):
+        if player_id in game["teams"][team_key]["players"]:
+            return team_key
+    return None
+
+
+def _generate_questions_for_modes(modes):
+    """Generate TOTAL_ROUNDS questions from the given mode(s)."""
+    excluded = set()
+    for s in recent_question_indices:
+        excluded |= s
+    all_questions = []
+    tracking = set()
+    if len(modes) == 1:
+        mode = modes[0]
+        pool = QUESTION_BANKS.get(mode, QUESTION_BANKS["fun"])
+        eligible = [(i, q) for i, q in enumerate(pool) if f"{mode}:{i}" not in excluded]
+        if len(eligible) < TOTAL_ROUNDS:
+            eligible = list(enumerate(pool))
+        chosen = random.sample(eligible, min(TOTAL_ROUNDS, len(eligible)))
+        tracking = {f"{mode}:{i}" for i, q in chosen}
+        all_questions = [q for i, q in chosen]
+    else:
+        per_cat = TOTAL_ROUNDS // len(modes)
+        remainder = TOTAL_ROUNDS % len(modes)
+        for i, mode in enumerate(modes):
+            count = per_cat + (1 if i < remainder else 0)
+            pool = QUESTION_BANKS.get(mode, QUESTION_BANKS["fun"])
+            eligible = [(j, q) for j, q in enumerate(pool) if f"{mode}:{j}" not in excluded]
+            if len(eligible) < count:
+                eligible = list(enumerate(pool))
+            chosen = random.sample(eligible, min(count, len(eligible)))
+            tracking |= {f"{mode}:{j}" for j, q in chosen}
+            all_questions.extend([q for j, q in chosen])
+        random.shuffle(all_questions)
+    recent_question_indices.append(tracking)
+    for q in all_questions:
+        choices_key = "choices" if "choices" in q else "options"
+        paired = list(zip(q[choices_key], [c == q["answer"] for c in q[choices_key]]))
+        random.shuffle(paired)
+        q[choices_key] = [p[0] for p in paired]
+        q["answer"] = next(p[0] for p in paired if p[1])
+    return all_questions
+
+
+def new_team_game(host_id, host_name):
+    """Create a new team game (questions generated after category vote)."""
+    game_id = str(uuid.uuid4())[:8]
+    game = {
+        "id": game_id,
+        "team_mode": True,
+        "host_id": host_id,
+        "players": {
+            host_id: {"name": host_name, "score": 0, "total_time": 0.0, "correct_count": 0},
+        },
+        "player_order": [host_id],
+        "questions": [],
+        "round": 0,
+        "round_start": None,
+        "answers": {},
+        "ready": {},
+        "state": "team_lobby",
+        "result_shown_at": None,
+        "round_results": [],
+        "last_poll": {host_id: time.time()},
+        "created_at": time.time(),
+        "mode": None,
+        "teams": {
+            "A": {"name": "Team A", "players": []},
+            "B": {"name": "Team B", "players": []},
+        },
+        "team_finalized": False,
+        "category_votes": {},
+        "disconnected": [],
+        "team_scores": {"A": 0, "B": 0},
+    }
+    games[game_id] = game
+    return game
+
 
 def get_safe_state(game, player_id):
     """Return game state safe to send to a specific player."""
@@ -261,6 +349,10 @@ def get_safe_state(game, player_id):
         }
         if "image" in q:
             state["question"]["image"] = q["image"]
+        # Countdown timer
+        round_start = g.get("round_start")
+        if round_start:
+            state["time_remaining"] = max(0, round(ROUND_TIMEOUT - (time.time() - round_start), 1))
         # Has this player already answered this round?
         rd_answers = g["answers"].get(g["round"], {})
         if player_id in rd_answers:
@@ -284,6 +376,100 @@ def get_safe_state(game, player_id):
         if player_id in ranks:
             state["leaderboard_rank"] = ranks[player_id]
 
+    return state
+
+
+def get_team_safe_state(game, player_id):
+    """Return team game state safe to send to a specific player."""
+    g = game
+    p = g["players"].get(player_id, {})
+    my_team = _get_player_team(g, player_id)
+    state = {
+        "game_id": g["id"],
+        "state": g["state"],
+        "team_mode": True,
+        "your_name": p.get("name", ""),
+        "your_team": my_team,
+        "is_host": player_id == g.get("host_id"),
+        "teams": {
+            "A": {
+                "name": g["teams"]["A"]["name"],
+                "players": [g["players"][pid]["name"] for pid in g["teams"]["A"]["players"]
+                            if pid in g["players"]],
+                "player_count": len(g["teams"]["A"]["players"]),
+                "score": g.get("team_scores", {}).get("A", 0),
+            },
+            "B": {
+                "name": g["teams"]["B"]["name"],
+                "players": [g["players"][pid]["name"] for pid in g["teams"]["B"]["players"]
+                            if pid in g["players"]],
+                "player_count": len(g["teams"]["B"]["players"]),
+                "score": g.get("team_scores", {}).get("B", 0),
+            },
+        },
+    }
+    if g["state"] == "team_lobby":
+        assigned = set(g["teams"]["A"]["players"]) | set(g["teams"]["B"]["players"])
+        unassigned = [{"player_id": pid, "name": g["players"][pid]["name"]}
+                      for pid in g["player_order"] if pid not in assigned]
+        state["unassigned_players"] = unassigned
+        state["team_finalized"] = g.get("team_finalized", False)
+        if player_id == g.get("host_id"):
+            state["all_players"] = [
+                {"player_id": pid, "name": g["players"][pid]["name"],
+                 "team": _get_player_team(g, pid)}
+                for pid in g["player_order"]
+            ]
+    if g["state"] == "team_preview":
+        state["is_host"] = player_id == g.get("host_id")
+    if g["state"] == "team_vote":
+        total_players = len(g["player_order"])
+        votes_in = len(g.get("category_votes", {}))
+        state["vote_progress"] = {"voted": votes_in, "total": total_players}
+        state["has_voted"] = player_id in g.get("category_votes", {})
+    if g["state"] in ("active", "round_result", "finished"):
+        state["round"] = g["round"] + 1
+        state["total_rounds"] = TOTAL_ROUNDS
+        state["mode_name"] = g.get("voted_category_name", "")
+    if g["state"] == "active":
+        q = g["questions"][g["round"]]
+        choices_key = "choices" if "choices" in q else "options"
+        state["question"] = {
+            "category": q.get("category", ""),
+            "text": q["question"],
+            "choices": q[choices_key],
+        }
+        if "image" in q:
+            state["question"]["image"] = q["image"]
+        round_start = g.get("round_start")
+        if round_start:
+            state["time_remaining"] = max(0, round(ROUND_TIMEOUT - (time.time() - round_start), 1))
+        rd_answers = g["answers"].get(g["round"], {})
+        if player_id in rd_answers:
+            state["already_answered"] = True
+            state["your_choice"] = rd_answers[player_id]["choice"]
+        if my_team:
+            teammates = g["teams"][my_team]["players"]
+            active_teammates = [pid for pid in teammates if pid not in g.get("disconnected", [])]
+            answered_teammates = sum(1 for pid in active_teammates if pid in rd_answers)
+            state["teammate_progress"] = {"answered": answered_teammates, "total": len(active_teammates)}
+    if g["state"] == "round_result":
+        state["last_result"] = g["round_results"][-1] if g["round_results"] else None
+    if g["state"] == "finished":
+        a_score = g.get("team_scores", {}).get("A", 0)
+        b_score = g.get("team_scores", {}).get("B", 0)
+        if a_score > b_score:
+            state["winning_team"] = "A"
+        elif b_score > a_score:
+            state["winning_team"] = "B"
+        else:
+            state["winning_team"] = "tie"
+        state["round_results"] = g["round_results"]
+        state["mvp"] = g.get("mvp")
+        if g.get("rematch_game_id"):
+            state["rematch_game_id"] = g["rematch_game_id"]
+        if g.get("newgame_id"):
+            state["newgame_id"] = g["newgame_id"]
     return state
 
 
@@ -320,11 +506,12 @@ def advance_round(game):
         game["players"][pid]["total_time"] += time_taken
         pname = game["players"][pid]["name"]
         result["players"][pname] = {
-            "choice": a["choice"],
+            "choice": a["choice"] if a["choice"] is not None else "No answer",
             "correct": is_correct,
             "points": points,
             "was_first": pid == first_pid,
             "time_taken": time_taken,
+            "timed_out": a["choice"] is None,
         }
 
     game["round_results"].append(result)
@@ -335,6 +522,98 @@ def advance_round(game):
     if rd + 1 >= TOTAL_ROUNDS:
         game["state"] = "finished"
         _update_leaderboard(game)
+    else:
+        game["round"] += 1
+
+
+def advance_round_team(game):
+    """Check if team round is complete and advance."""
+    rd = game["round"]
+    rd_answers = game["answers"].get(rd, {})
+    active_players = [pid for pid in game["player_order"]
+                      if pid not in game.get("disconnected", [])]
+    for pid in active_players:
+        if pid not in rd_answers:
+            return  # Still waiting
+
+    q = game["questions"][rd]
+    correct_answer = q["answer"]
+    round_start = game.get("round_start") or game["created_at"]
+    team_correct = {"A": 0, "B": 0}
+    team_time = {"A": 0.0, "B": 0.0}
+    team_player_count = {"A": 0, "B": 0}
+
+    for pid, a in rd_answers.items():
+        team = _get_player_team(game, pid)
+        if not team:
+            continue
+        is_correct = a["choice"] == correct_answer
+        time_taken = round(a["time"] - round_start, 2)
+        game["players"][pid]["total_time"] += time_taken
+        team_player_count[team] += 1
+        team_time[team] += time_taken
+        if is_correct:
+            team_correct[team] += 1
+            game["players"][pid]["correct_count"] = game["players"][pid].get("correct_count", 0) + 1
+
+    a_base = team_correct["A"]
+    b_base = team_correct["B"]
+    a_time = round(team_time["A"], 1)
+    b_time = round(team_time["B"], 1)
+    a_has = team_player_count["A"] > 0
+    b_has = team_player_count["B"] > 0
+
+    # Determine bonus
+    bonus = None
+    if a_base > b_base and a_has and b_has and a_time < b_time:
+        bonus = {"team": "A", "type": "exceeds_expectations",
+                 "name": "Exceeds Expectations Bonus", "multiplier": 1.5}
+    elif b_base > a_base and a_has and b_has and b_time < a_time:
+        bonus = {"team": "B", "type": "exceeds_expectations",
+                 "name": "Exceeds Expectations Bonus", "multiplier": 1.5}
+    elif a_base == b_base and a_base > 0 and a_has and b_has:
+        if a_time < b_time:
+            bonus = {"team": "A", "type": "quick_response",
+                     "name": "Quick Response Bonus", "multiplier": 1.25}
+        elif b_time < a_time:
+            bonus = {"team": "B", "type": "quick_response",
+                     "name": "Quick Response Bonus", "multiplier": 1.25}
+
+    a_final = a_base
+    b_final = b_base
+    if bonus:
+        if bonus["team"] == "A":
+            a_final = round(a_base * bonus["multiplier"], 2)
+        else:
+            b_final = round(b_base * bonus["multiplier"], 2)
+
+    game["team_scores"]["A"] += a_final
+    game["team_scores"]["B"] += b_final
+
+    result = {
+        "round": rd + 1,
+        "category": q.get("category", ""),
+        "question": q["question"],
+        "correct_answer": correct_answer,
+        "team_results": {
+            "A": {"correct": a_base, "time": a_time, "base_score": a_base,
+                   "final_score": a_final, "name": game["teams"]["A"]["name"]},
+            "B": {"correct": b_base, "time": b_time, "base_score": b_base,
+                   "final_score": b_final, "name": game["teams"]["B"]["name"]},
+        },
+        "bonus": bonus,
+        "team_a_cumulative": game["team_scores"]["A"],
+        "team_b_cumulative": game["team_scores"]["B"],
+    }
+
+    game["round_results"].append(result)
+    game["state"] = "round_result"
+    game["result_shown_at"] = time.time()
+
+    if rd + 1 >= TOTAL_ROUNDS:
+        game["state"] = "finished"
+        _calculate_mvp(game)
+        _update_team_leaderboard(game)
     else:
         game["round"] += 1
 
@@ -370,6 +649,105 @@ def _update_leaderboard(game):
         rank = _get_leaderboard_rank(p["name"], p["score"], round(p["total_time"], 1), mode)
         if rank:
             game["leaderboard_ranks"][pid] = rank
+
+
+def _update_team_leaderboard(game):
+    """Add winning team to the team leaderboard."""
+    a_score = game.get("team_scores", {}).get("A", 0)
+    b_score = game.get("team_scores", {}).get("B", 0)
+    if a_score == b_score:
+        return
+    winner = game["teams"]["A"] if a_score > b_score else game["teams"]["B"]
+    score = max(a_score, b_score)
+    _insert_leaderboard_entry(winner["name"], score, 0, "team")
+
+
+def _resolve_category_vote(game):
+    """Tally votes and generate questions for the winning category/categories."""
+    votes = game.get("category_votes", {})
+    if not votes:
+        return
+    vote_counts = {}
+    for cat in votes.values():
+        vote_counts[cat] = vote_counts.get(cat, 0) + 1
+    max_votes = max(vote_counts.values())
+    winning_cats = sorted([cat for cat, count in vote_counts.items() if count == max_votes])
+    game["questions"] = _generate_questions_for_modes(winning_cats)
+    if len(winning_cats) == 1:
+        game["mode"] = winning_cats[0]
+        game["voted_category_name"] = MODE_NAMES.get(winning_cats[0], winning_cats[0])
+    else:
+        game["mode"] = "mixed"
+        game["voted_category_name"] = " + ".join(MODE_NAMES.get(c, c) for c in winning_cats)
+
+
+def _check_team_disconnects(game):
+    """Mark team players as disconnected if they haven't polled recently."""
+    if not game.get("team_mode") or game["state"] not in ("active", "round_result"):
+        return
+    now = time.time()
+    disconnected = game.get("disconnected", [])
+    for pid in game["player_order"]:
+        if pid in disconnected:
+            continue
+        last_poll = game["last_poll"].get(pid, 0)
+        if now - last_poll > TEAM_DISCONNECT_TIMEOUT:
+            disconnected.append(pid)
+            if game["state"] == "active":
+                rd = game["round"]
+                if rd not in game["answers"]:
+                    game["answers"][rd] = {}
+                if pid not in game["answers"][rd]:
+                    round_start = game.get("round_start") or game["created_at"]
+                    game["answers"][rd][pid] = {
+                        "choice": None,
+                        "time": now,
+                        "correct": False,
+                    }
+    game["disconnected"] = disconnected
+
+
+def _calculate_mvp(game):
+    """Calculate MVP: most correct answers, fastest avg time as tiebreaker."""
+    best_pid = None
+    best_correct = -1
+    best_avg_time = float('inf')
+    disconnected = game.get("disconnected", [])
+    for pid in game["player_order"]:
+        if pid in disconnected:
+            continue
+        p = game["players"][pid]
+        correct_count = p.get("correct_count", 0)
+        avg_time = p.get("total_time", 0) / max(TOTAL_ROUNDS, 1)
+        if (correct_count > best_correct or
+                (correct_count == best_correct and avg_time < best_avg_time)):
+            best_correct = correct_count
+            best_avg_time = avg_time
+            best_pid = pid
+    if best_pid:
+        game["mvp"] = {
+            "name": game["players"][best_pid]["name"],
+            "team": _get_player_team(game, best_pid),
+            "correct_count": best_correct,
+            "avg_time": round(best_avg_time, 1),
+        }
+
+
+def _cleanup_team_lobby(game):
+    """Remove stale players from team lobby."""
+    if game["state"] != "team_lobby":
+        return
+    now = time.time()
+    host_id = game.get("host_id")
+    stale = [pid for pid in game["player_order"]
+             if pid != host_id and now - game["last_poll"].get(pid, 0) > POOL_STALE_TIMEOUT]
+    for pid in stale:
+        game["player_order"].remove(pid)
+        if pid in game["players"]:
+            del game["players"][pid]
+        for tk in ("A", "B"):
+            if pid in game["teams"][tk]["players"]:
+                game["teams"][tk]["players"].remove(pid)
 
 
 def _generate_computer_answers(game, difficulty):
@@ -414,10 +792,41 @@ def _maybe_computer_answer(game):
         advance_round(game)
 
 
+def _check_round_timeout(game):
+    """Auto-submit wrong answers for players who haven't answered within the timeout."""
+    if game["state"] != "active":
+        return
+    round_start = game.get("round_start")
+    if not round_start:
+        return
+    if time.time() - round_start < ROUND_TIMEOUT:
+        return
+    rd = game["round"]
+    if rd not in game["answers"]:
+        game["answers"][rd] = {}
+    if game.get("team_mode"):
+        active_players = [pid for pid in game["player_order"]
+                          if pid not in game.get("disconnected", [])]
+    else:
+        active_players = game["player_order"]
+    for pid in active_players:
+        if pid not in game["answers"][rd]:
+            game["answers"][rd][pid] = {
+                "choice": None,
+                "time": round_start + ROUND_TIMEOUT,
+                "correct": False,
+            }
+    if game.get("team_mode"):
+        advance_round_team(game)
+    else:
+        advance_round(game)
+
+
 def next_round_if_ready(game):
     """Move from round_result to active if enough time has passed."""
     if game["state"] == "round_result" and game["result_shown_at"]:
-        if time.time() - game["result_shown_at"] > 3:
+        delay = TEAM_RESULT_DISPLAY_TIME if game.get("team_mode") else 3
+        if time.time() - game["result_shown_at"] > delay:
             game["state"] = "active"
             game["round_start"] = time.time()
 
@@ -475,7 +884,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
         if path == "/api/leaderboard":
             params = urllib.parse.parse_qs(parsed.query)
             mode = params.get("mode", ["fun"])[0]
-            if mode not in QUESTION_BANKS:
+            if mode not in QUESTION_BANKS and mode != "team":
                 mode = "fun"
             self._json_response(_load_leaderboard(mode))
             return
@@ -514,6 +923,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 game["last_poll"][player_id] = time.time()
                 next_round_if_ready(game)
                 _maybe_computer_answer(game)
+                _check_round_timeout(game)
                 self._json_response(get_safe_state(game, player_id))
             return
 
@@ -600,6 +1010,25 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 self._json_response({"error": "Not in pool"}, 404)
             return
 
+        if path == "/api/team/state":
+            params = urllib.parse.parse_qs(parsed.query)
+            game_id = params.get("game_id", [None])[0]
+            player_id = params.get("player_id", [None])[0]
+            if not game_id or not player_id or game_id not in games:
+                self._json_response({"error": "Invalid game or player"}, 400)
+                return
+            with game_lock:
+                game = games[game_id]
+                game["last_poll"][player_id] = time.time()
+                _cleanup_team_lobby(game)
+                next_round_if_ready(game)
+                _check_team_disconnects(game)
+                _check_round_timeout(game)
+                if game["state"] == "active" and game.get("team_mode"):
+                    advance_round_team(game)
+                self._json_response(get_team_safe_state(game, player_id))
+            return
+
         # Serve static files
         safe = path.lstrip("/")
         filepath = os.path.join(PUBLIC_DIR, safe)
@@ -683,6 +1112,208 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                     game["state"] = "lobby"
                     match["game_id"] = game["id"]
             self._json_response({"ok": True})
+            return
+
+        if path == "/api/team/create":
+            name = data.get("name", "Player")[:20].strip() or "Player"
+            player_id = str(uuid.uuid4())[:8]
+            with game_lock:
+                game = new_team_game(player_id, name)
+                team_game_state["queue"] = game["id"]
+            self._json_response({"game_id": game["id"], "player_id": player_id})
+            return
+
+        if path == "/api/team/join":
+            name = data.get("name", "Player")[:20].strip() or "Player"
+            player_id = str(uuid.uuid4())[:8]
+            with game_lock:
+                qid = team_game_state.get("queue")
+                if not qid or qid not in games:
+                    self._json_response({"error": "No team game available"}, 404)
+                    return
+                game = games[qid]
+                if game["state"] != "team_lobby":
+                    self._json_response({"error": "Game already started"}, 400)
+                    return
+                game["players"][player_id] = {"name": name, "score": 0, "total_time": 0.0, "correct_count": 0}
+                game["player_order"].append(player_id)
+                game["last_poll"][player_id] = time.time()
+            self._json_response({"game_id": game["id"], "player_id": player_id})
+            return
+
+        if path == "/api/team/assign":
+            game_id = data.get("game_id")
+            host_id = data.get("host_id")
+            target_id = data.get("target_player_id")
+            team = data.get("team", "A")
+            if team not in ("A", "B"):
+                self._json_response({"error": "Invalid team"}, 400)
+                return
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                game = games[game_id]
+                if game.get("host_id") != host_id:
+                    self._json_response({"error": "Not the host"}, 403)
+                    return
+                if target_id not in game["players"]:
+                    self._json_response({"error": "Player not found"}, 404)
+                    return
+                for tk in ("A", "B"):
+                    if target_id in game["teams"][tk]["players"]:
+                        game["teams"][tk]["players"].remove(target_id)
+                game["teams"][team]["players"].append(target_id)
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/team/name":
+            game_id = data.get("game_id")
+            host_id = data.get("host_id")
+            team = data.get("team")
+            name = data.get("name", "").strip()[:30]
+            if team not in ("A", "B") or not name:
+                self._json_response({"error": "Invalid request"}, 400)
+                return
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                game = games[game_id]
+                if game.get("host_id") != host_id:
+                    self._json_response({"error": "Not the host"}, 403)
+                    return
+                game["teams"][team]["name"] = name
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/team/finalize":
+            game_id = data.get("game_id")
+            host_id = data.get("host_id")
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                game = games[game_id]
+                if game.get("host_id") != host_id:
+                    self._json_response({"error": "Not the host"}, 403)
+                    return
+                game["team_finalized"] = True
+                game["state"] = "team_preview"
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/team/start":
+            game_id = data.get("game_id")
+            host_id = data.get("host_id")
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                game = games[game_id]
+                if game.get("host_id") != host_id:
+                    self._json_response({"error": "Not the host"}, 403)
+                    return
+                if game["state"] != "team_preview":
+                    self._json_response({"error": "Not in preview"}, 400)
+                    return
+                game["state"] = "team_vote"
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/team/vote":
+            game_id = data.get("game_id")
+            player_id = data.get("player_id")
+            category = data.get("category", "fun").strip().lower()
+            if category not in QUESTION_BANKS:
+                category = "fun"
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                game = games[game_id]
+                if player_id not in game["players"]:
+                    self._json_response({"error": "Not in game"}, 400)
+                    return
+                if game["state"] != "team_vote":
+                    self._json_response({"error": "Not in voting phase"}, 400)
+                    return
+                game["category_votes"][player_id] = category
+                game["last_poll"][player_id] = time.time()
+                if len(game["category_votes"]) >= len(game["player_order"]):
+                    _resolve_category_vote(game)
+                    game["state"] = "active"
+                    game["round_start"] = time.time()
+                    team_game_state["queue"] = None
+            self._json_response({"ok": True})
+            return
+
+        if path == "/api/team/rematch":
+            game_id = data.get("game_id")
+            player_id = data.get("player_id")
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                old_game = games[game_id]
+                if not old_game.get("team_mode") or old_game["state"] != "finished":
+                    self._json_response({"error": "Game not finished"}, 400)
+                    return
+                # Check if rematch already created
+                if old_game.get("rematch_game_id"):
+                    self._json_response({"game_id": old_game["rematch_game_id"]})
+                    return
+                # Create new game with same teams
+                host_id = old_game.get("host_id")
+                host_name = old_game["players"].get(host_id, {}).get("name", "Host")
+                new_g = new_team_game(host_id, host_name)
+                # Copy team structure (only players still connected)
+                disconnected = old_game.get("disconnected", [])
+                for tk in ("A", "B"):
+                    new_g["teams"][tk]["name"] = old_game["teams"][tk]["name"]
+                    for pid in old_game["teams"][tk]["players"]:
+                        if pid in old_game["players"] and pid not in disconnected:
+                            if pid != host_id:
+                                pname = old_game["players"][pid]["name"]
+                                new_g["players"][pid] = {"name": pname, "score": 0, "total_time": 0.0, "correct_count": 0}
+                                new_g["player_order"].append(pid)
+                                new_g["last_poll"][pid] = time.time()
+                            new_g["teams"][tk]["players"].append(pid)
+                new_g["team_finalized"] = True
+                new_g["state"] = "team_vote"
+                old_game["rematch_game_id"] = new_g["id"]
+                team_game_state["queue"] = None  # rematch doesn't need queue
+            self._json_response({"game_id": new_g["id"]})
+            return
+
+        if path == "/api/team/newgame":
+            game_id = data.get("game_id")
+            player_id = data.get("player_id")
+            with game_lock:
+                if game_id not in games:
+                    self._json_response({"error": "Game not found"}, 404)
+                    return
+                old_game = games[game_id]
+                if not old_game.get("team_mode") or old_game["state"] != "finished":
+                    self._json_response({"error": "Game not finished"}, 400)
+                    return
+                if old_game.get("newgame_id"):
+                    self._json_response({"game_id": old_game["newgame_id"]})
+                    return
+                host_id = old_game.get("host_id")
+                host_name = old_game["players"].get(host_id, {}).get("name", "Host")
+                new_g = new_team_game(host_id, host_name)
+                # Add all non-disconnected players back to lobby (unassigned)
+                disconnected = old_game.get("disconnected", [])
+                for pid in old_game["player_order"]:
+                    if pid != host_id and pid in old_game["players"] and pid not in disconnected:
+                        pname = old_game["players"][pid]["name"]
+                        new_g["players"][pid] = {"name": pname, "score": 0, "total_time": 0.0, "correct_count": 0}
+                        new_g["player_order"].append(pid)
+                        new_g["last_poll"][pid] = time.time()
+                old_game["newgame_id"] = new_g["id"]
+                team_game_state["queue"] = new_g["id"]
+            self._json_response({"game_id": new_g["id"]})
             return
 
         if path == "/api/join":
@@ -773,14 +1404,18 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                     self._json_response({"error": "Already answered"}, 400)
                     return
 
+                game["last_poll"][player_id] = time.time()
                 game["answers"][rd][player_id] = {
                     "choice": choice,
                     "time": time.time(),
                     "correct": choice == game["questions"][rd]["answer"],
                 }
 
-                advance_round(game)
-                _maybe_computer_answer(game)
+                if game.get("team_mode"):
+                    advance_round_team(game)
+                else:
+                    advance_round(game)
+                    _maybe_computer_answer(game)
             self._json_response({"ok": True})
             return
 

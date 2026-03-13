@@ -538,6 +538,294 @@
     margin-top: 8px;
   }
 
+  /* ── Team Lobby ── */
+  .team-lobby-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+  }
+  .team-columns {
+    display: flex;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .team-column {
+    flex: 1;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 120px;
+  }
+  .team-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .team-column-name { font-weight: 700; font-size: 1.1rem; }
+  .team-column-count { color: var(--muted); font-size: 0.85rem; }
+  .team-name-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    outline: none;
+  }
+  .team-name-input:focus { border-color: var(--accent); }
+  .team-player-card {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .team-player-card .tp-name { font-weight: 600; font-size: 0.95rem; }
+  .team-player-card .tp-you { color: var(--green); font-size: 0.8rem; margin-left: 6px; }
+  .team-switch-btn {
+    padding: 4px 10px;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .team-switch-btn:hover { border-color: var(--accent); color: var(--text); }
+  .unassigned-section {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+  .unassigned-header {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .assign-btns { display: flex; gap: 6px; }
+  .assign-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .assign-btn.team-a { background: rgba(59,130,246,0.2); color: var(--accent); }
+  .assign-btn.team-b { background: rgba(139,92,246,0.2); color: var(--accent2); }
+  .assign-btn:hover { transform: scale(1.05); }
+
+  /* ── Team Preview ── */
+  .team-preview-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  .team-roster {
+    display: flex;
+    gap: 24px;
+    margin: 20px 0;
+  }
+  .team-roster-col {
+    flex: 1;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .team-roster-col h3 { margin-bottom: 12px; font-size: 1.1rem; }
+  .team-roster-col.team-a h3 { color: var(--accent); }
+  .team-roster-col.team-b h3 { color: var(--accent2); }
+  .roster-player {
+    padding: 6px 0;
+    border-bottom: 1px solid #1a2744;
+    font-size: 0.95rem;
+  }
+  .roster-player:last-child { border-bottom: none; }
+  .roster-player.is-you { color: var(--green); font-weight: 700; }
+
+  /* ── Team Vote ── */
+  .team-vote-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  .vote-categories {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .vote-cat-btn {
+    padding: 14px;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vote-cat-btn:hover { border-color: var(--accent); background: #1a2744; }
+  .vote-cat-btn.voted {
+    border-color: var(--green);
+    background: rgba(34,197,94,0.15);
+    pointer-events: none;
+  }
+  .vote-cat-btn:disabled { pointer-events: none; opacity: 0.6; }
+  .vote-progress { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
+
+  /* ── Team Waiting ── */
+  .team-waiting {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .team-waiting .spinner { margin: 0 auto 16px; }
+  .team-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 12px;
+  }
+  .team-badge.team-a { background: rgba(59,130,246,0.15); color: var(--accent); }
+  .team-badge.team-b { background: rgba(139,92,246,0.15); color: var(--accent2); }
+
+  /* ── Team Scoreboard ── */
+  .team-scoreboard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 20px;
+  }
+  .team-score-side { text-align: center; }
+  .team-score-side .ts-name { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+  .team-score-side .ts-score { font-size: 1.8rem; font-weight: 700; }
+  .team-score-side.team-a .ts-score { color: var(--accent); }
+  .team-score-side.team-b .ts-score { color: var(--accent2); }
+  .teammate-progress {
+    text-align: center;
+    color: var(--muted);
+    margin-top: 12px;
+    font-size: 0.9rem;
+  }
+
+  /* ── Team Result ── */
+  .team-result-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  .team-result-row {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .team-result-card {
+    flex: 1;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .team-result-card .tr-name { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+  .team-result-card .tr-correct { font-size: 1.6rem; font-weight: 700; }
+  .team-result-card .tr-time { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  .bonus-banner {
+    background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(245,158,11,0.1));
+    border: 2px solid rgba(234,179,8,0.4);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 16px;
+    animation: rank-glow 2s ease-in-out infinite alternate;
+  }
+  .bonus-banner .bb-name { font-size: 1.1rem; font-weight: 700; color: var(--yellow); }
+  .bonus-banner .bb-detail { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  @keyframes bonus-pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ── Team Game Over ── */
+  .mvp-card {
+    background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(245,158,11,0.1));
+    border: 2px solid rgba(234,179,8,0.4);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 16px 0;
+    text-align: center;
+    animation: rank-glow 2s ease-in-out infinite alternate;
+  }
+  .mvp-card .mvp-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+  .mvp-card .mvp-name { font-size: 1.8rem; font-weight: 900; color: var(--yellow); }
+  .mvp-card .mvp-stats { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
+
+  @media (max-width: 500px) {
+    .team-columns { flex-direction: column; }
+    .team-roster { flex-direction: column; }
+    .team-result-row { flex-direction: column; }
+    .vote-categories { grid-template-columns: 1fr; }
+  }
+
+  /* ── Countdown Timer ── */
+  .countdown-timer {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .countdown-bar {
+    height: 6px;
+    background: #334155;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .countdown-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.8s linear, background-color 0.3s;
+    float: right;
+  }
+  .countdown-bar-fill.urgent {
+    background: var(--red);
+  }
+  .countdown-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .countdown-text.urgent {
+    color: var(--red);
+    animation: pulse-urgent 1s ease-in-out infinite;
+  }
+  @keyframes pulse-urgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
   /* ── Fireworks Canvas ── */
   #fireworks-canvas {
     position: fixed;
@@ -586,7 +874,19 @@
             <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#f59e0b);" onclick="goToCategoryStep()">Super Computer</button>
             <button class="btn btn-primary" style="flex:1;" onclick="goToMatchmaking()">Another Player</button>
           </div>
+          <button class="btn" style="width:100%;margin-top:12px;background:linear-gradient(135deg,#22c55e,#14b8a6);" onclick="goToTeamChoice()">Team Game</button>
           <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToNameStep()">Back</button>
+        </div>
+
+        <!-- Step 2b: Team game choice -->
+        <div id="join-step-team-choice" style="display:none;">
+          <h2 style="margin-bottom:8px;">Team Game</h2>
+          <p style="color:var(--muted);margin-bottom:24px;">Host a new game or join an existing one</p>
+          <div style="display:flex;gap:12px;">
+            <button class="btn btn-green" style="flex:1;" onclick="hostTeamGame()">Host Game</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="joinTeamGame()">Join Team Game</button>
+          </div>
+          <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
         </div>
 
         <!-- Step 3: Pick a category (shared by computer + human create paths) -->
@@ -671,6 +971,7 @@
           <button class="lb-tab" data-mode="cooleys" onclick="switchLeaderboardTab('join','cooleys')">Cooleys</button>
           <button class="lb-tab" data-mode="buildings" onclick="switchLeaderboardTab('join','buildings')">Buildings</button>
           <button class="lb-tab" data-mode="logic" onclick="switchLeaderboardTab('join','logic')">Logic</button>
+          <button class="lb-tab" data-mode="team" onclick="switchLeaderboardTab('join','team')">Teams</button>
         </div>
         <div id="lb-content"><p class="lb-empty">Loading...</p></div>
       </div>
@@ -715,6 +1016,12 @@
           <div class="name" id="opp-name">Opponent</div>
           <div class="score" id="opp-score">0</div>
         </div>
+      </div>
+      <div class="countdown-timer" id="countdown-timer" style="display:none;">
+        <div class="countdown-bar">
+          <div class="countdown-bar-fill" id="countdown-bar-fill" style="width:100%;"></div>
+        </div>
+        <span class="countdown-text" id="countdown-text">30s</span>
       </div>
       <div class="question-box" id="question-box">
         <div class="category-badge" id="q-category">Math</div>
@@ -786,10 +1093,171 @@
             <button class="lb-tab" data-mode="cooleys" onclick="switchLeaderboardTab('gameover','cooleys')">Cooleys</button>
             <button class="lb-tab" data-mode="buildings" onclick="switchLeaderboardTab('gameover','buildings')">Buildings</button>
             <button class="lb-tab" data-mode="logic" onclick="switchLeaderboardTab('gameover','logic')">Logic</button>
+            <button class="lb-tab" data-mode="team" onclick="switchLeaderboardTab('gameover','team')">Teams</button>
           </div>
           <div id="lb-gameover-content"><p class="lb-empty">Loading...</p></div>
         </div>
         <div class="history" id="go-history"></div>
+      </div>
+    </div>
+
+    <!-- TEAM LOBBY SCREEN -->
+    <div id="screen-team-lobby" class="screen">
+      <div class="team-lobby-box">
+        <div id="team-lobby-host" style="display:none;">
+          <h2 style="margin-bottom:4px;">Team Assignment</h2>
+          <p style="color:var(--muted);margin-bottom:16px;">Assign players to teams</p>
+          <div class="team-columns">
+            <div class="team-column">
+              <div class="team-column-header">
+                <span class="team-column-name" style="color:var(--accent);">Team A</span>
+                <span class="team-column-count" id="team-a-count">0</span>
+              </div>
+              <input type="text" class="team-name-input" id="team-a-name-input" placeholder="Team A" maxlength="30" onchange="setTeamName('A',this.value)">
+              <div id="team-a-players"></div>
+            </div>
+            <div class="team-column">
+              <div class="team-column-header">
+                <span class="team-column-name" style="color:var(--accent2);">Team B</span>
+                <span class="team-column-count" id="team-b-count">0</span>
+              </div>
+              <input type="text" class="team-name-input" id="team-b-name-input" placeholder="Team B" maxlength="30" onchange="setTeamName('B',this.value)">
+              <div id="team-b-players"></div>
+            </div>
+          </div>
+          <div class="unassigned-section" id="unassigned-section" style="display:none;">
+            <div class="unassigned-header">Unassigned</div>
+            <div id="unassigned-players"></div>
+          </div>
+          <button class="btn btn-green" style="width:100%;margin-top:20px;" onclick="finalizeTeams()">Finalize Teams</button>
+        </div>
+        <div id="team-lobby-player" style="display:none;">
+          <div class="team-waiting">
+            <div class="spinner"></div>
+            <h2>Waiting for Host</h2>
+            <p style="color:var(--muted);margin-top:8px;">The host is assigning teams...</p>
+            <div id="player-team-status" style="margin-top:16px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM PREVIEW SCREEN -->
+    <div id="screen-team-preview" class="screen">
+      <div class="team-preview-box">
+        <h2 style="margin-bottom:4px;">Teams Set!</h2>
+        <p style="color:var(--muted);margin-bottom:16px;">Here are your teams</p>
+        <div class="team-roster" id="team-preview-roster"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:20px;" id="start-game-btn" onclick="startTeamGame()">Start Game</button>
+        <p id="preview-wait-msg" style="color:var(--muted);margin-top:16px;">Waiting for host to start...</p>
+      </div>
+    </div>
+
+    <!-- TEAM VOTE SCREEN -->
+    <div id="screen-team-vote" class="screen">
+      <div class="team-vote-box">
+        <h2 style="margin-bottom:4px;">Pick a Category</h2>
+        <p style="color:var(--muted);margin-bottom:8px;">Vote with your team!</p>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">If there's a tie, questions will be split among tied categories</p>
+        <div class="vote-categories" id="vote-categories"></div>
+        <div class="vote-progress" id="vote-progress"></div>
+      </div>
+    </div>
+
+    <!-- TEAM GAME SCREEN -->
+    <div id="screen-team-game" class="screen">
+      <div class="team-scoreboard">
+        <div class="team-score-side team-a">
+          <div class="ts-name" id="tg-team-a-name">Team A</div>
+          <div class="ts-score" id="tg-team-a-score">0</div>
+        </div>
+        <div class="round-info">
+          <span class="round-num" id="tg-round-display">1/10</span>
+          Round
+        </div>
+        <div class="team-score-side team-b">
+          <div class="ts-name" id="tg-team-b-name">Team B</div>
+          <div class="ts-score" id="tg-team-b-score">0</div>
+        </div>
+      </div>
+      <div class="countdown-timer" id="tg-countdown-timer" style="display:none;">
+        <div class="countdown-bar">
+          <div class="countdown-bar-fill" id="tg-countdown-bar-fill" style="width:100%;"></div>
+        </div>
+        <span class="countdown-text" id="tg-countdown-text">30s</span>
+      </div>
+      <div class="question-box" id="tg-question-box">
+        <div class="category-badge" id="tg-q-category">Category</div>
+        <div class="question-image" id="tg-q-image" style="display:none;"></div>
+        <div class="question-text" id="tg-q-text">Loading...</div>
+        <div class="choices" id="tg-q-choices"></div>
+        <div class="waiting-opponent" id="tg-waiting-answer" style="display:none;">
+          Waiting for teammates...
+        </div>
+        <div class="teammate-progress" id="tg-teammate-progress" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- TEAM ROUND RESULT SCREEN -->
+    <div id="screen-team-result" class="screen">
+      <div class="team-scoreboard">
+        <div class="team-score-side team-a">
+          <div class="ts-name" id="tr-team-a-name">Team A</div>
+          <div class="ts-score" id="tr-team-a-score">0</div>
+        </div>
+        <div class="round-info">
+          <span class="round-num" id="tr-round-display">1/10</span>
+          Round
+        </div>
+        <div class="team-score-side team-b">
+          <div class="ts-name" id="tr-team-b-name">Team B</div>
+          <div class="ts-score" id="tr-team-b-score">0</div>
+        </div>
+      </div>
+      <div class="team-result-box">
+        <h2 id="tr-title">Round Results</h2>
+        <p style="color:var(--muted);margin-top:4px;" id="tr-correct-answer"></p>
+        <div class="team-result-row">
+          <div class="team-result-card">
+            <div class="tr-name" id="tr-a-name">Team A</div>
+            <div class="tr-correct" id="tr-a-correct" style="color:var(--accent);">0</div>
+            <div style="color:var(--muted);font-size:0.8rem;">correct</div>
+            <div class="tr-time" id="tr-a-time"></div>
+          </div>
+          <div class="team-result-card">
+            <div class="tr-name" id="tr-b-name">Team B</div>
+            <div class="tr-correct" id="tr-b-correct" style="color:var(--accent2);">0</div>
+            <div style="color:var(--muted);font-size:0.8rem;">correct</div>
+            <div class="tr-time" id="tr-b-time"></div>
+          </div>
+        </div>
+        <div id="tr-bonus-area"></div>
+        <p style="color:var(--muted);margin-top:16px;font-size:0.9rem;" id="tr-advance-msg">Next round starting...</p>
+      </div>
+    </div>
+
+    <!-- TEAM GAME OVER SCREEN -->
+    <div id="screen-team-gameover" class="screen">
+      <div class="gameover-box">
+        <div id="tgo-icon" style="font-size:3.5rem;margin-bottom:8px;"></div>
+        <h2 id="tgo-title">Game Over</h2>
+        <p id="tgo-subtitle" style="color:var(--muted);margin-top:4px;"></p>
+        <div class="final-scores">
+          <div class="final-score-card">
+            <div class="fs-name" id="tgo-team-a-name">Team A</div>
+            <div class="fs-score" id="tgo-team-a-score" style="color:var(--accent);">0</div>
+          </div>
+          <div class="final-score-card">
+            <div class="fs-name" id="tgo-team-b-name">Team B</div>
+            <div class="fs-score" id="tgo-team-b-score" style="color:var(--accent2);">0</div>
+          </div>
+        </div>
+        <div id="tgo-mvp-area"></div>
+        <div style="display:flex;gap:12px;margin-top:20px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-green" onclick="teamRematch()">Rematch</button>
+          <button class="btn btn-primary" onclick="teamNewGame()">New Game</button>
+          <button class="btn" style="background:#334155;" onclick="location.reload()">Leave</button>
+        </div>
       </div>
     </div>
 
@@ -876,7 +1344,7 @@
   let poolPollTimer = null;
   let opponentName = null;
 
-  const joinSteps = ['join-step-name','join-step-opponent','join-step-category','join-step-computer','join-step-matchmaking','join-step-category-select'];
+  const joinSteps = ['join-step-name','join-step-opponent','join-step-team-choice','join-step-category','join-step-computer','join-step-matchmaking','join-step-category-select'];
   function showJoinStep(id) {
     joinSteps.forEach(s => $(s).style.display = 'none');
     $(id).style.display = 'block';
@@ -889,6 +1357,7 @@
     $('name-error').style.display = 'none';
     showJoinStep('join-step-opponent');
   }
+  function goToTeamChoice() { showJoinStep('join-step-team-choice'); }
   function goToCategoryStep() { showJoinStep('join-step-category'); }
   function categoryNext() { showJoinStep('join-step-computer'); }
 
@@ -1155,6 +1624,27 @@
       $('opp-score').textContent = s.opponent_score;
       $('round-display').textContent = s.round + '/' + s.total_rounds;
 
+      // Update countdown timer
+      const timerEl = $('countdown-timer');
+      if (s.time_remaining !== undefined) {
+        timerEl.style.display = '';
+        const pct = (s.time_remaining / 30) * 100;
+        const fill = $('countdown-bar-fill');
+        const text = $('countdown-text');
+        fill.style.width = pct + '%';
+        const seconds = Math.ceil(s.time_remaining);
+        text.textContent = seconds + 's';
+        if (s.time_remaining <= 10) {
+          fill.classList.add('urgent');
+          text.classList.add('urgent');
+        } else {
+          fill.classList.remove('urgent');
+          text.classList.remove('urgent');
+        }
+      } else {
+        timerEl.style.display = 'none';
+      }
+
       if (s.question) {
         $('q-category').textContent = s.question.category;
         $('q-text').textContent = s.question.text;
@@ -1315,8 +1805,9 @@
     const correctText = res.correct ? 'Correct' : 'Wrong';
     const ptsClass = res.points > 0 ? 'positive' : 'zero';
     const speedBadge = res.was_first && res.correct ? ' <span class="speed-label">FASTEST</span>' : '';
+    const choiceDisplay = res.timed_out ? '<span style="color:var(--yellow);">Time\'s up!</span>' : '"' + res.choice + '"';
     return `<div class="player-line">
-      <span>${name}: "${res.choice}" <span class="${correctClass}">${correctText}</span>${speedBadge}</span>
+      <span>${name}: ${choiceDisplay} <span class="${correctClass}">${correctText}</span>${speedBadge}</span>
       <span class="pts ${ptsClass}">+${res.points}</span>
     </div>`;
   }
@@ -1347,14 +1838,25 @@
         el.innerHTML = '<p class="lb-empty">No games completed yet. Be the first!</p>';
         return;
       }
-      let html = '<table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Time</th></tr></thead><tbody>';
+      const isTeam = mode === 'team';
+      let html = isTeam
+        ? '<table class="lb-table"><thead><tr><th>#</th><th>Team</th><th>Score</th></tr></thead><tbody>'
+        : '<table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Time</th></tr></thead><tbody>';
       data.forEach((entry, i) => {
-        html += `<tr>
-          <td class="lb-rank">${i + 1}</td>
-          <td class="lb-name">${entry.name}</td>
-          <td class="lb-score">${entry.score}</td>
-          <td class="lb-time">${entry.total_time}s</td>
-        </tr>`;
+        if (isTeam) {
+          html += `<tr>
+            <td class="lb-rank">${i + 1}</td>
+            <td class="lb-name">${entry.name}</td>
+            <td class="lb-score">${entry.score}</td>
+          </tr>`;
+        } else {
+          html += `<tr>
+            <td class="lb-rank">${i + 1}</td>
+            <td class="lb-name">${entry.name}</td>
+            <td class="lb-score">${entry.score}</td>
+            <td class="lb-time">${entry.total_time}s</td>
+          </tr>`;
+        }
       });
       html += '</tbody></table>';
       el.innerHTML = html;
@@ -1392,6 +1894,512 @@
       });
     } catch (e) {
       // Will sync on next poll
+    }
+  }
+
+  // ── Team Mode ──
+
+  let teamGameId = null;
+  let teamPlayerId = null;
+  let teamPollTimer = null;
+  let isTeamMode = false;
+  let lastTeamState = null;
+
+  async function hostTeamGame() {
+    const name = $('name-input').value.trim();
+    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); showJoinStep('join-step-name'); return; }
+    saveName(name);
+    try {
+      const res = await fetch('/api/team/create', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      teamGameId = data.game_id;
+      teamPlayerId = data.player_id;
+      isTeamMode = true;
+      startTeamPolling();
+    } catch (e) {
+      alert('Could not connect to server.');
+    }
+  }
+
+  async function joinTeamGame() {
+    const name = $('name-input').value.trim();
+    if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); showJoinStep('join-step-name'); return; }
+    saveName(name);
+    try {
+      const res = await fetch('/api/team/join', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error === 'No team game available' ? 'No team game is being hosted right now.' : data.error);
+        return;
+      }
+      teamGameId = data.game_id;
+      teamPlayerId = data.player_id;
+      isTeamMode = true;
+      startTeamPolling();
+    } catch (e) {
+      alert('Could not connect to server.');
+    }
+  }
+
+  function startTeamPolling() {
+    if (teamPollTimer) clearInterval(teamPollTimer);
+    teamPollTimer = setInterval(pollTeamState, 1000);
+    pollTeamState();
+  }
+
+  function stopTeamPolling() {
+    if (teamPollTimer) { clearInterval(teamPollTimer); teamPollTimer = null; }
+  }
+
+  async function pollTeamState() {
+    if (!teamGameId || !teamPlayerId) return;
+    try {
+      const res = await fetch(`/api/team/state?game_id=${teamGameId}&player_id=${teamPlayerId}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      });
+      const state = await res.json();
+      if (state.error) return;
+      lastTeamState = state;
+      renderTeamState(state);
+    } catch (e) {}
+  }
+
+  function renderTeamState(s) {
+    if (s.state === 'team_lobby') {
+      showScreen('team-lobby');
+      if (s.is_host) {
+        $('team-lobby-host').style.display = '';
+        $('team-lobby-player').style.display = 'none';
+        renderHostLobby(s);
+      } else {
+        $('team-lobby-host').style.display = 'none';
+        $('team-lobby-player').style.display = '';
+        renderPlayerLobby(s);
+      }
+    } else if (s.state === 'team_preview') {
+      showScreen('team-preview');
+      renderTeamPreview(s);
+    } else if (s.state === 'team_vote') {
+      showScreen('team-vote');
+      renderTeamVote(s);
+    } else if (s.state === 'active') {
+      showScreen('team-game');
+      renderTeamGame(s);
+    } else if (s.state === 'round_result') {
+      showScreen('team-result');
+      renderTeamResult(s);
+    } else if (s.state === 'finished') {
+      showScreen('team-gameover');
+      renderTeamGameOver(s);
+      // Check if another player initiated rematch/newgame
+      if (s.rematch_game_id && !teamGameOverHandled) {
+        teamGameOverHandled = true;
+        stopTeamPolling();
+        teamGameId = s.rematch_game_id;
+        teamResultRenderedRound = null;
+        teamVoteSubmitted = false;
+        $('vote-categories').removeAttribute('data-built');
+        startTeamPolling();
+        return;
+      }
+      if (s.newgame_id && !teamGameOverHandled) {
+        teamGameOverHandled = true;
+        stopTeamPolling();
+        teamGameId = s.newgame_id;
+        teamResultRenderedRound = null;
+        teamVoteSubmitted = false;
+        $('vote-categories').removeAttribute('data-built');
+        startTeamPolling();
+        return;
+      }
+    }
+  }
+
+  function renderHostLobby(s) {
+    // Team A players
+    let aHtml = '';
+    s.teams.A.players.forEach(name => {
+      const isYou = name === s.your_name;
+      aHtml += `<div class="team-player-card">
+        <span><span class="tp-name">${name}</span>${isYou ? '<span class="tp-you">(you)</span>' : ''}</span>
+        <button class="team-switch-btn" onclick="assignPlayer('${getPlayerIdByName(s, name)}','B')">→ B</button>
+      </div>`;
+    });
+    $('team-a-players').innerHTML = aHtml || '<p style="color:var(--muted);font-size:0.85rem;font-style:italic;">No players</p>';
+    $('team-a-count').textContent = s.teams.A.player_count + ' player' + (s.teams.A.player_count !== 1 ? 's' : '');
+
+    // Team B players
+    let bHtml = '';
+    s.teams.B.players.forEach(name => {
+      const isYou = name === s.your_name;
+      bHtml += `<div class="team-player-card">
+        <span><span class="tp-name">${name}</span>${isYou ? '<span class="tp-you">(you)</span>' : ''}</span>
+        <button class="team-switch-btn" onclick="assignPlayer('${getPlayerIdByName(s, name)}','A')">→ A</button>
+      </div>`;
+    });
+    $('team-b-players').innerHTML = bHtml || '<p style="color:var(--muted);font-size:0.85rem;font-style:italic;">No players</p>';
+    $('team-b-count').textContent = s.teams.B.player_count + ' player' + (s.teams.B.player_count !== 1 ? 's' : '');
+
+    // Unassigned players
+    if (s.unassigned_players && s.unassigned_players.length > 0) {
+      $('unassigned-section').style.display = '';
+      let uHtml = '';
+      s.unassigned_players.forEach(p => {
+        const isYou = p.name === s.your_name;
+        uHtml += `<div class="team-player-card">
+          <span><span class="tp-name">${p.name}</span>${isYou ? '<span class="tp-you">(you)</span>' : ''}</span>
+          <div class="assign-btns">
+            <button class="assign-btn team-a" onclick="assignPlayer('${p.player_id}','A')">Team A</button>
+            <button class="assign-btn team-b" onclick="assignPlayer('${p.player_id}','B')">Team B</button>
+          </div>
+        </div>`;
+      });
+      $('unassigned-players').innerHTML = uHtml;
+    } else {
+      $('unassigned-section').style.display = 'none';
+    }
+  }
+
+  function getPlayerIdByName(s, name) {
+    if (s.all_players) {
+      const p = s.all_players.find(p => p.name === name);
+      if (p) return p.player_id;
+    }
+    return '';
+  }
+
+  function renderPlayerLobby(s) {
+    let html = '';
+    if (s.your_team) {
+      html = `<p style="color:var(--text);font-size:1.1rem;">You are on:</p>
+        <div class="team-badge team-${s.your_team.toLowerCase()}">${s.teams[s.your_team].name}</div>`;
+    } else {
+      html = '<p style="color:var(--muted);">Not yet assigned to a team</p>';
+    }
+    $('player-team-status').innerHTML = html;
+  }
+
+  async function assignPlayer(targetId, team) {
+    await fetch('/api/team/assign', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ game_id: teamGameId, host_id: teamPlayerId, target_player_id: targetId, team }),
+    });
+  }
+
+  async function setTeamName(team, name) {
+    if (!name.trim()) return;
+    await fetch('/api/team/name', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ game_id: teamGameId, host_id: teamPlayerId, team, name: name.trim() }),
+    });
+  }
+
+  async function finalizeTeams() {
+    await fetch('/api/team/finalize', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ game_id: teamGameId, host_id: teamPlayerId }),
+    });
+  }
+
+  function renderTeamPreview(s) {
+    let html = '';
+    ['A', 'B'].forEach(tk => {
+      const team = s.teams[tk];
+      const cls = tk === 'A' ? 'team-a' : 'team-b';
+      html += `<div class="team-roster-col ${cls}">
+        <h3>${team.name}</h3>`;
+      team.players.forEach(name => {
+        const isYou = name === s.your_name;
+        html += `<div class="roster-player${isYou ? ' is-you' : ''}">${name}${isYou ? ' (you)' : ''}</div>`;
+      });
+      if (team.players.length === 0) {
+        html += '<div class="roster-player" style="color:var(--muted);font-style:italic;">No players</div>';
+      }
+      html += '</div>';
+    });
+    $('team-preview-roster').innerHTML = html;
+    if (s.is_host) {
+      $('start-game-btn').style.display = '';
+      $('preview-wait-msg').style.display = 'none';
+    } else {
+      $('start-game-btn').style.display = 'none';
+      $('preview-wait-msg').style.display = '';
+    }
+  }
+
+  async function startTeamGame() {
+    $('start-game-btn').disabled = true;
+    $('start-game-btn').textContent = 'Starting...';
+    await fetch('/api/team/start', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ game_id: teamGameId, host_id: teamPlayerId }),
+    });
+  }
+
+  let teamVoteSubmitted = false;
+  function renderTeamVote(s) {
+    const cats = $('vote-categories');
+    if (!cats.dataset.built) {
+      cats.dataset.built = '1';
+      teamVoteSubmitted = false;
+      let html = '';
+      Object.entries(MODE_NAMES).forEach(([key, name]) => {
+        html += `<button class="vote-cat-btn" data-cat="${key}" onclick="submitTeamVote('${key}',this)">${name}</button>`;
+      });
+      cats.innerHTML = html;
+    }
+    if (s.has_voted && !teamVoteSubmitted) {
+      teamVoteSubmitted = true;
+      cats.querySelectorAll('.vote-cat-btn').forEach(b => b.disabled = true);
+    }
+    const vp = s.vote_progress;
+    $('vote-progress').textContent = vp ? `${vp.voted}/${vp.total} players have voted` : '';
+  }
+
+  async function submitTeamVote(category, btn) {
+    teamVoteSubmitted = true;
+    $('vote-categories').querySelectorAll('.vote-cat-btn').forEach(b => {
+      b.disabled = true;
+      if (b === btn) b.classList.add('voted');
+    });
+    await fetch('/api/team/vote', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ game_id: teamGameId, player_id: teamPlayerId, category }),
+    });
+  }
+
+  function renderTeamGame(s) {
+    $('tg-team-a-name').textContent = s.teams.A.name;
+    $('tg-team-a-score').textContent = s.teams.A.score;
+    $('tg-team-b-name').textContent = s.teams.B.name;
+    $('tg-team-b-score').textContent = s.teams.B.score;
+    $('tg-round-display').textContent = s.round + '/' + s.total_rounds;
+
+    // Timer
+    const timerEl = $('tg-countdown-timer');
+    if (s.time_remaining !== undefined) {
+      timerEl.style.display = '';
+      const pct = (s.time_remaining / 30) * 100;
+      const fill = $('tg-countdown-bar-fill');
+      const text = $('tg-countdown-text');
+      fill.style.width = pct + '%';
+      const seconds = Math.ceil(s.time_remaining);
+      text.textContent = seconds + 's';
+      if (s.time_remaining <= 10) {
+        fill.classList.add('urgent');
+        text.classList.add('urgent');
+      } else {
+        fill.classList.remove('urgent');
+        text.classList.remove('urgent');
+      }
+    } else {
+      timerEl.style.display = 'none';
+    }
+
+    if (s.question) {
+      $('tg-q-category').textContent = s.question.category;
+      $('tg-q-text').textContent = s.question.text;
+
+      const imgEl = $('tg-q-image');
+      if (s.question.image) {
+        imgEl.style.display = 'block';
+        if (s.question.image.type === 'emoji') {
+          imgEl.innerHTML = '<div class="emoji-image">' + s.question.image.content + '</div>';
+        } else if (s.question.image.type === 'url') {
+          imgEl.innerHTML = '<img src="' + s.question.image.src + '" alt="' + (s.question.image.alt || '') + '">';
+        }
+      } else {
+        imgEl.style.display = 'none';
+        imgEl.innerHTML = '';
+      }
+
+      const box = $('tg-q-choices');
+      if (box.dataset.round !== String(s.round)) {
+        box.dataset.round = s.round;
+        box.innerHTML = '';
+        s.question.choices.forEach(c => {
+          const btn = document.createElement('button');
+          btn.className = 'choice-btn';
+          btn.textContent = c;
+          btn.onclick = () => submitTeamAnswer(c, btn);
+          box.appendChild(btn);
+        });
+      }
+
+      if (s.already_answered) {
+        box.querySelectorAll('.choice-btn').forEach(b => {
+          b.disabled = true;
+          if (b.textContent === s.your_choice) b.classList.add('selected');
+        });
+        $('tg-waiting-answer').style.display = 'block';
+        if (s.teammate_progress) {
+          $('tg-teammate-progress').style.display = '';
+          $('tg-teammate-progress').textContent = `${s.teammate_progress.answered}/${s.teammate_progress.total} teammates have answered`;
+        }
+      } else {
+        $('tg-waiting-answer').style.display = 'none';
+        $('tg-teammate-progress').style.display = 'none';
+      }
+    }
+  }
+
+  async function submitTeamAnswer(choice, btn) {
+    $('tg-q-choices').querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+    btn.classList.add('selected');
+    $('tg-waiting-answer').style.display = 'block';
+    await fetch('/api/answer', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({ game_id: teamGameId, player_id: teamPlayerId, choice }),
+    });
+  }
+
+  let teamResultRenderedRound = null;
+  let teamResultBonusTimer = null;
+
+  function renderTeamResult(s) {
+    $('tr-team-a-name').textContent = s.teams.A.name;
+    $('tr-team-a-score').textContent = s.teams.A.score;
+    $('tr-team-b-name').textContent = s.teams.B.name;
+    $('tr-team-b-score').textContent = s.teams.B.score;
+    $('tr-round-display').textContent = s.round + '/' + s.total_rounds;
+
+    if (s.last_result && teamResultRenderedRound !== s.round) {
+      teamResultRenderedRound = s.round;
+      const lr = s.last_result;
+      $('tr-correct-answer').textContent = 'Correct answer: ' + lr.correct_answer;
+      $('tr-a-name').textContent = lr.team_results.A.name;
+      $('tr-a-correct').textContent = lr.team_results.A.correct;
+      $('tr-a-time').textContent = lr.team_results.A.time + 's';
+      $('tr-b-name').textContent = lr.team_results.B.name;
+      $('tr-b-correct').textContent = lr.team_results.B.correct;
+      $('tr-b-time').textContent = lr.team_results.B.time + 's';
+
+      // Animated bonus reveal: show base scores first, then bonus after 1.5s
+      $('tr-bonus-area').innerHTML = '';
+      if (teamResultBonusTimer) clearTimeout(teamResultBonusTimer);
+      if (lr.bonus) {
+        teamResultBonusTimer = setTimeout(() => {
+          const winTeamName = lr.team_results[lr.bonus.team].name;
+          const baseScore = lr.team_results[lr.bonus.team].base_score;
+          const finalScore = lr.team_results[lr.bonus.team].final_score;
+          $('tr-bonus-area').innerHTML = `<div class="bonus-banner" style="animation: bonus-pop 0.5s ease-out;">
+            <div class="bb-name">${lr.bonus.name}</div>
+            <div class="bb-detail">${winTeamName}: ${baseScore} &times; ${lr.bonus.multiplier} = ${finalScore} pts</div>
+          </div>`;
+          // Update cumulative score to include bonus
+          $('tr-team-a-score').textContent = lr.team_a_cumulative;
+          $('tr-team-b-score').textContent = lr.team_b_cumulative;
+        }, 1500);
+      }
+
+      // Auto-advance countdown
+      let countdown = 10;
+      $('tr-advance-msg').textContent = 'Next round in ' + countdown + 's...';
+      const advanceInterval = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(advanceInterval);
+          $('tr-advance-msg').textContent = 'Loading next round...';
+        } else {
+          $('tr-advance-msg').textContent = 'Next round in ' + countdown + 's...';
+        }
+      }, 1000);
+    }
+  }
+
+  function renderTeamGameOver(s) {
+    $('tgo-team-a-name').textContent = s.teams.A.name;
+    $('tgo-team-a-score').textContent = s.teams.A.score;
+    $('tgo-team-b-name').textContent = s.teams.B.name;
+    $('tgo-team-b-score').textContent = s.teams.B.score;
+
+    const myTeam = s.your_team;
+    const winning = s.winning_team;
+
+    if (winning === 'tie') {
+      $('tgo-icon').innerHTML = '&#129309;';
+      $('tgo-title').innerHTML = '<span class="tie-text">It\'s a Tie!</span>';
+      $('tgo-subtitle').textContent = 'Evenly matched teams!';
+    } else if (winning === myTeam) {
+      $('tgo-icon').innerHTML = '&#127942;';
+      $('tgo-title').innerHTML = '<span class="win-text">Your Team Wins!</span>';
+      $('tgo-subtitle').textContent = 'Congratulations, champions!';
+      if (!document.getElementById('fireworks-canvas')) launchFireworks(5000);
+    } else {
+      $('tgo-icon').innerHTML = '&#128170;';
+      $('tgo-title').innerHTML = '<span class="lose-text">Your Team Lost</span>';
+      $('tgo-subtitle').textContent = 'Good game! Try again?';
+    }
+
+    // MVP
+    let mvpHtml = '';
+    if (s.mvp) {
+      const teamName = s.mvp.team ? s.teams[s.mvp.team].name : '';
+      mvpHtml = `<div class="mvp-card">
+        <div class="mvp-label">Most Valuable Player</div>
+        <div class="mvp-name">${s.mvp.name}</div>
+        <div class="mvp-stats">${s.mvp.correct_count}/${s.total_rounds} correct &middot; ${s.mvp.avg_time}s avg &middot; ${teamName}</div>
+      </div>`;
+    }
+    $('tgo-mvp-area').innerHTML = mvpHtml;
+
+  }
+
+  let teamGameOverHandled = false;
+
+  async function teamRematch() {
+    try {
+      const res = await fetch('/api/team/rematch', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ game_id: teamGameId, player_id: teamPlayerId }),
+      });
+      const data = await res.json();
+      if (data.game_id) {
+        stopTeamPolling();
+        teamGameId = data.game_id;
+        teamResultRenderedRound = null;
+        teamVoteSubmitted = false;
+        $('vote-categories').removeAttribute('data-built');
+        startTeamPolling();
+      }
+    } catch (e) {
+      alert('Could not create rematch.');
+    }
+  }
+
+  async function teamNewGame() {
+    try {
+      const res = await fetch('/api/team/newgame', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ game_id: teamGameId, player_id: teamPlayerId }),
+      });
+      const data = await res.json();
+      if (data.game_id) {
+        stopTeamPolling();
+        teamGameId = data.game_id;
+        teamResultRenderedRound = null;
+        teamVoteSubmitted = false;
+        $('vote-categories').removeAttribute('data-built');
+        startTeamPolling();
+      }
+    } catch (e) {
+      alert('Could not create new game.');
     }
   }
 
