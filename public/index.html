@@ -903,6 +903,7 @@
               <option value="cooleys">History of Cooleys</option>
               <option value="buildings">Famous Buildings</option>
               <option value="logic">Logic</option>
+              <option value="awh">History of AWH</option>
             </select>
           </div>
           <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="categoryNext()">Next</button>
@@ -947,6 +948,7 @@
               <option value="cooleys">History of Cooleys</option>
               <option value="buildings">Famous Buildings</option>
               <option value="logic">Logic</option>
+              <option value="awh">History of AWH</option>
             </select>
           </div>
           <button class="btn btn-primary" style="width:100%;margin-top:16px;" id="category-lock-btn" onclick="submitCategory()">Lock In</button>
@@ -971,6 +973,7 @@
           <button class="lb-tab" data-mode="cooleys" onclick="switchLeaderboardTab('join','cooleys')">Cooleys</button>
           <button class="lb-tab" data-mode="buildings" onclick="switchLeaderboardTab('join','buildings')">Buildings</button>
           <button class="lb-tab" data-mode="logic" onclick="switchLeaderboardTab('join','logic')">Logic</button>
+          <button class="lb-tab" data-mode="awh" onclick="switchLeaderboardTab('join','awh')">AWH</button>
           <button class="lb-tab" data-mode="team" onclick="switchLeaderboardTab('join','team')">Teams</button>
         </div>
         <div id="lb-content"><p class="lb-empty">Loading...</p></div>
@@ -1093,6 +1096,7 @@
             <button class="lb-tab" data-mode="cooleys" onclick="switchLeaderboardTab('gameover','cooleys')">Cooleys</button>
             <button class="lb-tab" data-mode="buildings" onclick="switchLeaderboardTab('gameover','buildings')">Buildings</button>
             <button class="lb-tab" data-mode="logic" onclick="switchLeaderboardTab('gameover','logic')">Logic</button>
+            <button class="lb-tab" data-mode="awh" onclick="switchLeaderboardTab('gameover','awh')">AWH</button>
             <button class="lb-tab" data-mode="team" onclick="switchLeaderboardTab('gameover','team')">Teams</button>
           </div>
           <div id="lb-gameover-content"><p class="lb-empty">Loading...</p></div>
@@ -1281,6 +1285,7 @@
     cooleys: 'History of Cooleys',
     buildings: 'Famous Buildings',
     logic: 'Logic',
+    awh: 'History of AWH',
   };
 
   const $ = id => document.getElementById(id);

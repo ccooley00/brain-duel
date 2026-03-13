@@ -29,6 +29,7 @@ from questions_colgate import QUESTIONS as COLGATE_QUESTIONS
 from questions_cooleys import QUESTIONS as COOLEYS_QUESTIONS
 from questions_buildings import QUESTIONS as BUILDINGS_QUESTIONS
 from questions_logic import QUESTIONS as LOGIC_QUESTIONS
+from questions_awh import QUESTIONS as AWH_QUESTIONS
 
 QUESTION_BANKS = {
     "fun": FUN_QUESTIONS,
@@ -38,6 +39,7 @@ QUESTION_BANKS = {
     "cooleys": COOLEYS_QUESTIONS,
     "buildings": BUILDINGS_QUESTIONS,
     "logic": LOGIC_QUESTIONS,
+    "awh": AWH_QUESTIONS,
 }
 
 MODE_NAMES = {
@@ -48,6 +50,7 @@ MODE_NAMES = {
     "cooleys": "History of Cooleys",
     "buildings": "Famous Buildings",
     "logic": "Logic",
+    "awh": "History of AWH",
 }
 
 TOTAL_ROUNDS = 10
