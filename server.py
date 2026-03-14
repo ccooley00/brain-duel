@@ -232,7 +232,8 @@ MIN_IMAGE_QUESTIONS = 3  # minimum photo questions in AWH mode
 
 
 def _select_with_image_guarantee(mode, pool, eligible, count, excluded):
-    """Select questions ensuring at least MIN_IMAGE_QUESTIONS have images (for AWH mode)."""
+    """Select questions ensuring at least MIN_IMAGE_QUESTIONS have images (for AWH mode).
+    Photo questions are spread evenly throughout the game, not clustered together."""
     if mode != "awh":
         return random.sample(eligible, min(count, len(eligible)))
     # Separate image and non-image eligible questions
@@ -244,7 +245,19 @@ def _select_with_image_guarantee(mode, pool, eligible, count, excluded):
     remaining_count = count - img_needed
     remaining_pool = non_img_eligible + [x for x in img_eligible if x not in img_chosen]
     rest_chosen = random.sample(remaining_pool, min(remaining_count, len(remaining_pool)))
-    return img_chosen + rest_chosen
+    # Spread photo questions evenly: place them in distributed slots
+    all_chosen = rest_chosen[:]  # start with non-image (mostly)
+    random.shuffle(all_chosen)
+    img_list = list(img_chosen)
+    random.shuffle(img_list)
+    if img_list and all_chosen:
+        spacing = len(all_chosen) // (len(img_list) + 1)
+        for idx, img_q in enumerate(img_list):
+            insert_pos = min((idx + 1) * spacing + idx, len(all_chosen))
+            all_chosen.insert(insert_pos, img_q)
+    else:
+        all_chosen.extend(img_list)
+    return all_chosen
 
 
 def _generate_questions_for_modes(modes):
