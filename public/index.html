@@ -819,11 +819,52 @@
   }
   .countdown-text.urgent {
     color: var(--red);
-    animation: pulse-urgent 1s ease-in-out infinite;
+    animation: blink-urgent 0.5s step-end infinite;
   }
-  @keyframes pulse-urgent {
+  .countdown-bar-fill.urgent {
+    animation: blink-urgent 0.5s step-end infinite;
+  }
+  @keyframes blink-urgent {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── Powered By MIDAS Splash ── */
+  .midas-splash {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    animation: midas-fade-in 0.8s ease-out;
+  }
+  .midas-splash img {
+    max-width: 350px;
+    width: 80%;
+    margin-bottom: 24px;
+    animation: midas-logo-pop 1s ease-out;
+  }
+  .midas-splash .midas-text {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: midas-text-slide 1s ease-out 0.3s both;
+  }
+  @keyframes midas-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes midas-logo-pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes midas-text-slide {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   /* ── Fireworks Canvas ── */
@@ -1024,7 +1065,7 @@
         <div class="countdown-bar">
           <div class="countdown-bar-fill" id="countdown-bar-fill" style="width:100%;"></div>
         </div>
-        <span class="countdown-text" id="countdown-text">30s</span>
+        <span class="countdown-text" id="countdown-text">20s</span>
       </div>
       <div class="question-box" id="question-box">
         <div class="category-badge" id="q-category">Math</div>
@@ -1056,7 +1097,7 @@
       <div class="result-box">
         <div class="result-icon" id="result-icon"></div>
         <h2 id="result-title">Round Results</h2>
-        <p style="color:var(--muted);margin-top:4px;" id="result-correct-answer"></p>
+        <p style="color:var(--green);margin-top:8px;font-size:1.3rem;font-weight:700;" id="result-correct-answer"></p>
         <div class="result-detail" id="result-detail"></div>
         <p style="color:var(--muted);margin-top:12px;font-size:0.9rem;">Next round starting...</p>
       </div>
@@ -1168,6 +1209,14 @@
       </div>
     </div>
 
+    <!-- POWERED BY MIDAS SPLASH SCREEN -->
+    <div id="screen-midas-splash" class="screen">
+      <div class="midas-splash">
+        <img src="/midas-logo.png" alt="AWH MIDAS">
+        <div class="midas-text">Powered By MIDAS</div>
+      </div>
+    </div>
+
     <!-- TEAM GAME SCREEN -->
     <div id="screen-team-game" class="screen">
       <div class="team-scoreboard">
@@ -1188,7 +1237,7 @@
         <div class="countdown-bar">
           <div class="countdown-bar-fill" id="tg-countdown-bar-fill" style="width:100%;"></div>
         </div>
-        <span class="countdown-text" id="tg-countdown-text">30s</span>
+        <span class="countdown-text" id="tg-countdown-text">20s</span>
       </div>
       <div class="question-box" id="tg-question-box">
         <div class="category-badge" id="tg-q-category">Category</div>
@@ -1220,7 +1269,7 @@
       </div>
       <div class="team-result-box">
         <h2 id="tr-title">Round Results</h2>
-        <p style="color:var(--muted);margin-top:4px;" id="tr-correct-answer"></p>
+        <p style="color:var(--green);margin-top:8px;font-size:1.3rem;font-weight:700;" id="tr-correct-answer"></p>
         <div class="team-result-row">
           <div class="team-result-card">
             <div class="tr-name" id="tr-a-name">Team A</div>
@@ -1633,13 +1682,13 @@
       const timerEl = $('countdown-timer');
       if (s.time_remaining !== undefined) {
         timerEl.style.display = '';
-        const pct = (s.time_remaining / 30) * 100;
+        const pct = (s.time_remaining / 20) * 100;
         const fill = $('countdown-bar-fill');
         const text = $('countdown-text');
         fill.style.width = pct + '%';
         const seconds = Math.ceil(s.time_remaining);
         text.textContent = seconds + 's';
-        if (s.time_remaining <= 10) {
+        if (s.time_remaining <= 5) {
           fill.classList.add('urgent');
           text.classList.add('urgent');
         } else {
@@ -1765,15 +1814,16 @@
       }
 
       let shouldFireworks = false;
+      const isAwh = gameMode === 'awh';
       if (s.outcome === 'win') {
         $('go-icon').innerHTML = '&#127942;';
-        $('go-title').innerHTML = '<span class="win-text">You Win!</span>';
-        $('go-subtitle').textContent = 'Congratulations, champion!';
+        $('go-title').innerHTML = '<span class="win-text">' + (isAwh ? 'You Won - Take the Weekend Off!' : 'You Win!') + '</span>';
+        $('go-subtitle').textContent = isAwh ? '' : 'Congratulations, champion!';
         shouldFireworks = true;
       } else if (s.outcome === 'lose') {
         $('go-icon').innerHTML = '&#128170;';
-        $('go-title').innerHTML = '<span class="lose-text">You Lost</span>';
-        $('go-subtitle').textContent = 'Good game! Try again?';
+        $('go-title').innerHTML = '<span class="lose-text">' + (isAwh ? 'You Lost - Report to MIDAS Training Immediately!' : 'You Lost') + '</span>';
+        $('go-subtitle').textContent = isAwh ? '' : 'Good game! Try again?';
       } else {
         $('go-icon').innerHTML = '&#129309;';
         $('go-title').innerHTML = '<span class="tie-text">It\'s a Tie!</span>';
@@ -1909,6 +1959,7 @@
   let teamPollTimer = null;
   let isTeamMode = false;
   let lastTeamState = null;
+  let midasSplashShown = false;
 
   async function hostTeamGame() {
     const name = $('name-input').value.trim();
@@ -1996,6 +2047,15 @@
       showScreen('team-vote');
       renderTeamVote(s);
     } else if (s.state === 'active') {
+      if (!midasSplashShown) {
+        midasSplashShown = true;
+        showScreen('midas-splash');
+        setTimeout(() => {
+          showScreen('team-game');
+          renderTeamGame(s);
+        }, 3000);
+        return;
+      }
       showScreen('team-game');
       renderTeamGame(s);
     } else if (s.state === 'round_result') {
@@ -2010,6 +2070,7 @@
         stopTeamPolling();
         teamGameId = s.rematch_game_id;
         teamResultRenderedRound = null;
+        midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
         startTeamPolling();
@@ -2020,6 +2081,7 @@
         stopTeamPolling();
         teamGameId = s.newgame_id;
         teamResultRenderedRound = null;
+        midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
         startTeamPolling();
@@ -2197,13 +2259,13 @@
     const timerEl = $('tg-countdown-timer');
     if (s.time_remaining !== undefined) {
       timerEl.style.display = '';
-      const pct = (s.time_remaining / 30) * 100;
+      const pct = (s.time_remaining / 20) * 100;
       const fill = $('tg-countdown-bar-fill');
       const text = $('tg-countdown-text');
       fill.style.width = pct + '%';
       const seconds = Math.ceil(s.time_remaining);
       text.textContent = seconds + 's';
-      if (s.time_remaining <= 10) {
+      if (s.time_remaining <= 5) {
         fill.classList.add('urgent');
         text.classList.add('urgent');
       } else {
@@ -2312,7 +2374,7 @@
       }
 
       // Auto-advance countdown
-      let countdown = 10;
+      let countdown = 20;
       $('tr-advance-msg').textContent = 'Next round in ' + countdown + 's...';
       const advanceInterval = setInterval(() => {
         countdown--;
@@ -2335,19 +2397,20 @@
     const myTeam = s.your_team;
     const winning = s.winning_team;
 
+    const isAwhTeam = s.mode === 'awh';
     if (winning === 'tie') {
       $('tgo-icon').innerHTML = '&#129309;';
       $('tgo-title').innerHTML = '<span class="tie-text">It\'s a Tie!</span>';
       $('tgo-subtitle').textContent = 'Evenly matched teams!';
     } else if (winning === myTeam) {
       $('tgo-icon').innerHTML = '&#127942;';
-      $('tgo-title').innerHTML = '<span class="win-text">Your Team Wins!</span>';
-      $('tgo-subtitle').textContent = 'Congratulations, champions!';
+      $('tgo-title').innerHTML = '<span class="win-text">' + (isAwhTeam ? 'You Won - Take the Weekend Off!' : 'Your Team Wins!') + '</span>';
+      $('tgo-subtitle').textContent = isAwhTeam ? '' : 'Congratulations, champions!';
       if (!document.getElementById('fireworks-canvas')) launchFireworks(5000);
     } else {
       $('tgo-icon').innerHTML = '&#128170;';
-      $('tgo-title').innerHTML = '<span class="lose-text">Your Team Lost</span>';
-      $('tgo-subtitle').textContent = 'Good game! Try again?';
+      $('tgo-title').innerHTML = '<span class="lose-text">' + (isAwhTeam ? 'You Lost - Report to MIDAS Training Immediately!' : 'Your Team Lost') + '</span>';
+      $('tgo-subtitle').textContent = isAwhTeam ? '' : 'Good game! Try again?';
     }
 
     // MVP
@@ -2378,6 +2441,7 @@
         stopTeamPolling();
         teamGameId = data.game_id;
         teamResultRenderedRound = null;
+        midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
         startTeamPolling();
@@ -2399,6 +2463,7 @@
         stopTeamPolling();
         teamGameId = data.game_id;
         teamResultRenderedRound = null;
+        midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
         startTeamPolling();

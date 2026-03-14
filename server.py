@@ -56,7 +56,7 @@ MODE_NAMES = {
 TOTAL_ROUNDS = 10
 POINTS_CORRECT = 10
 POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
-ROUND_TIMEOUT = 30      # seconds before auto-submitting wrong answer
+ROUND_TIMEOUT = 20      # seconds before auto-submitting wrong answer
 
 COMPUTER_OPPONENTS = {
     "hal": {"name": "HAL 9000", "accuracy": 0.30, "min_time": 8.0, "max_time": 15.0},
@@ -73,7 +73,7 @@ game_lock = threading.Lock()  # protects all shared state
 
 team_game_state = {"queue": None}  # game_id of active team game being set up
 TEAM_DISCONNECT_TIMEOUT = 10       # seconds before player considered disconnected
-TEAM_RESULT_DISPLAY_TIME = 10      # seconds to show round results in team mode
+TEAM_RESULT_DISPLAY_TIME = 20      # seconds to show round results in team mode
 
 # ── Matchmaking Pool ─────────────────────────────────────────────────────────
 
@@ -187,7 +187,7 @@ def new_game(mode="fun", mode2=None):
         eligible = [(i, q) for i, q in enumerate(questions_pool) if f"{mode}:{i}" not in excluded]
         if len(eligible) < TOTAL_ROUNDS:
             eligible = list(enumerate(questions_pool))
-        chosen = random.sample(eligible, min(TOTAL_ROUNDS, len(eligible)))
+        chosen = _select_with_image_guarantee(mode, questions_pool, eligible, TOTAL_ROUNDS, excluded)
         recent_question_indices.append({f"{mode}:{i}" for i, q in chosen})
         questions = [q for i, q in chosen]
 
@@ -228,6 +228,25 @@ def _get_player_team(game, player_id):
     return None
 
 
+MIN_IMAGE_QUESTIONS = 3  # minimum photo questions in AWH mode
+
+
+def _select_with_image_guarantee(mode, pool, eligible, count, excluded):
+    """Select questions ensuring at least MIN_IMAGE_QUESTIONS have images (for AWH mode)."""
+    if mode != "awh":
+        return random.sample(eligible, min(count, len(eligible)))
+    # Separate image and non-image eligible questions
+    img_eligible = [(i, q) for i, q in eligible if "image" in q]
+    non_img_eligible = [(i, q) for i, q in eligible if "image" not in q]
+    # Guarantee at least MIN_IMAGE_QUESTIONS image questions
+    img_needed = min(MIN_IMAGE_QUESTIONS, len(img_eligible))
+    img_chosen = random.sample(img_eligible, img_needed)
+    remaining_count = count - img_needed
+    remaining_pool = non_img_eligible + [x for x in img_eligible if x not in img_chosen]
+    rest_chosen = random.sample(remaining_pool, min(remaining_count, len(remaining_pool)))
+    return img_chosen + rest_chosen
+
+
 def _generate_questions_for_modes(modes):
     """Generate TOTAL_ROUNDS questions from the given mode(s)."""
     excluded = set()
@@ -241,7 +260,7 @@ def _generate_questions_for_modes(modes):
         eligible = [(i, q) for i, q in enumerate(pool) if f"{mode}:{i}" not in excluded]
         if len(eligible) < TOTAL_ROUNDS:
             eligible = list(enumerate(pool))
-        chosen = random.sample(eligible, min(TOTAL_ROUNDS, len(eligible)))
+        chosen = _select_with_image_guarantee(mode, pool, eligible, TOTAL_ROUNDS, excluded)
         tracking = {f"{mode}:{i}" for i, q in chosen}
         all_questions = [q for i, q in chosen]
     else:
@@ -394,6 +413,7 @@ def get_team_safe_state(game, player_id):
         "your_name": p.get("name", ""),
         "your_team": my_team,
         "is_host": player_id == g.get("host_id"),
+        "mode": g.get("mode"),
         "teams": {
             "A": {
                 "name": g["teams"]["A"]["name"],
@@ -828,7 +848,7 @@ def _check_round_timeout(game):
 def next_round_if_ready(game):
     """Move from round_result to active if enough time has passed."""
     if game["state"] == "round_result" and game["result_shown_at"]:
-        delay = TEAM_RESULT_DISPLAY_TIME if game.get("team_mode") else 3
+        delay = TEAM_RESULT_DISPLAY_TIME if game.get("team_mode") else 6
         if time.time() - game["result_shown_at"] > delay:
             game["state"] = "active"
             game["round_start"] = time.time()
