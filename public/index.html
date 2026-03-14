@@ -1065,7 +1065,7 @@
         <div class="countdown-bar">
           <div class="countdown-bar-fill" id="countdown-bar-fill" style="width:100%;"></div>
         </div>
-        <span class="countdown-text" id="countdown-text">20s</span>
+        <span class="countdown-text" id="countdown-text">15s</span>
       </div>
       <div class="question-box" id="question-box">
         <div class="category-badge" id="q-category">Math</div>
@@ -1193,7 +1193,11 @@
         <h2 style="margin-bottom:4px;">Teams Set!</h2>
         <p style="color:var(--muted);margin-bottom:16px;">Here are your teams</p>
         <div class="team-roster" id="team-preview-roster"></div>
-        <button class="btn btn-primary" style="width:100%;margin-top:20px;" id="start-game-btn" onclick="startTeamGame()">Start Game</button>
+        <div id="host-category-choice" style="display:none;margin-top:20px;">
+          <p style="color:var(--muted);margin-bottom:10px;">Choose a category or let players vote:</p>
+          <div id="host-cat-buttons" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;"></div>
+          <button class="btn btn-primary" style="width:100%;" id="let-vote-btn" onclick="startTeamGame()">Let Players Vote</button>
+        </div>
         <p id="preview-wait-msg" style="color:var(--muted);margin-top:16px;">Waiting for host to start...</p>
       </div>
     </div>
@@ -1237,7 +1241,7 @@
         <div class="countdown-bar">
           <div class="countdown-bar-fill" id="tg-countdown-bar-fill" style="width:100%;"></div>
         </div>
-        <span class="countdown-text" id="tg-countdown-text">20s</span>
+        <span class="countdown-text" id="tg-countdown-text">15s</span>
       </div>
       <div class="question-box" id="tg-question-box">
         <div class="category-badge" id="tg-q-category">Category</div>
@@ -1682,7 +1686,7 @@
       const timerEl = $('countdown-timer');
       if (s.time_remaining !== undefined) {
         timerEl.style.display = '';
-        const pct = (s.time_remaining / 20) * 100;
+        const pct = (s.time_remaining / 15) * 100;
         const fill = $('countdown-bar-fill');
         const text = $('countdown-text');
         fill.style.width = pct + '%';
@@ -2053,7 +2057,7 @@
         setTimeout(() => {
           showScreen('team-game');
           renderTeamGame(s);
-        }, 3000);
+        }, 5000);
         return;
       }
       showScreen('team-game');
@@ -2073,6 +2077,7 @@
         midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
+        $('host-cat-buttons').removeAttribute('data-built');
         startTeamPolling();
         return;
       }
@@ -2084,6 +2089,7 @@
         midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
+        $('host-cat-buttons').removeAttribute('data-built');
         startTeamPolling();
         return;
       }
@@ -2197,21 +2203,32 @@
     });
     $('team-preview-roster').innerHTML = html;
     if (s.is_host) {
-      $('start-game-btn').style.display = '';
+      $('host-category-choice').style.display = '';
       $('preview-wait-msg').style.display = 'none';
+      const catBtns = $('host-cat-buttons');
+      if (!catBtns.dataset.built) {
+        catBtns.dataset.built = '1';
+        let html = '';
+        Object.entries(MODE_NAMES).forEach(([key, name]) => {
+          html += `<button class="vote-cat-btn" onclick="startTeamGame('${key}')">${name}</button>`;
+        });
+        catBtns.innerHTML = html;
+      }
     } else {
-      $('start-game-btn').style.display = 'none';
+      $('host-category-choice').style.display = 'none';
       $('preview-wait-msg').style.display = '';
     }
   }
 
-  async function startTeamGame() {
-    $('start-game-btn').disabled = true;
-    $('start-game-btn').textContent = 'Starting...';
+  async function startTeamGame(category) {
+    $('host-category-choice').querySelectorAll('button').forEach(b => b.disabled = true);
+    $('let-vote-btn').textContent = 'Starting...';
+    const payload = { game_id: teamGameId, host_id: teamPlayerId };
+    if (category) payload.category = category;
     await fetch('/api/team/start', {
       method: 'POST',
       headers: API_HEADERS,
-      body: JSON.stringify({ game_id: teamGameId, host_id: teamPlayerId }),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -2250,16 +2267,16 @@
 
   function renderTeamGame(s) {
     $('tg-team-a-name').textContent = s.teams.A.name;
-    $('tg-team-a-score').textContent = s.teams.A.score;
+    $('tg-team-a-score').textContent = Math.round(s.teams.A.score * 10) / 10;
     $('tg-team-b-name').textContent = s.teams.B.name;
-    $('tg-team-b-score').textContent = s.teams.B.score;
+    $('tg-team-b-score').textContent = Math.round(s.teams.B.score * 10) / 10;
     $('tg-round-display').textContent = s.round + '/' + s.total_rounds;
 
     // Timer
     const timerEl = $('tg-countdown-timer');
     if (s.time_remaining !== undefined) {
       timerEl.style.display = '';
-      const pct = (s.time_remaining / 20) * 100;
+      const pct = (s.time_remaining / 15) * 100;
       const fill = $('tg-countdown-bar-fill');
       const text = $('tg-countdown-text');
       fill.style.width = pct + '%';
@@ -2339,9 +2356,9 @@
 
   function renderTeamResult(s) {
     $('tr-team-a-name').textContent = s.teams.A.name;
-    $('tr-team-a-score').textContent = s.teams.A.score;
+    $('tr-team-a-score').textContent = Math.round(s.teams.A.score * 10) / 10;
     $('tr-team-b-name').textContent = s.teams.B.name;
-    $('tr-team-b-score').textContent = s.teams.B.score;
+    $('tr-team-b-score').textContent = Math.round(s.teams.B.score * 10) / 10;
     $('tr-round-display').textContent = s.round + '/' + s.total_rounds;
 
     if (s.last_result && teamResultRenderedRound !== s.round) {
@@ -2349,10 +2366,10 @@
       const lr = s.last_result;
       $('tr-correct-answer').textContent = 'Correct answer: ' + lr.correct_answer;
       $('tr-a-name').textContent = lr.team_results.A.name;
-      $('tr-a-correct').textContent = lr.team_results.A.correct;
+      $('tr-a-correct').textContent = lr.team_results.A.correct + '/' + lr.team_results.A.total_players + ' correct';
       $('tr-a-time').textContent = lr.team_results.A.time + 's';
       $('tr-b-name').textContent = lr.team_results.B.name;
-      $('tr-b-correct').textContent = lr.team_results.B.correct;
+      $('tr-b-correct').textContent = lr.team_results.B.correct + '/' + lr.team_results.B.total_players + ' correct';
       $('tr-b-time').textContent = lr.team_results.B.time + 's';
 
       // Animated bonus reveal: show base scores first, then bonus after 1.5s
@@ -2368,13 +2385,13 @@
             <div class="bb-detail">${winTeamName}: ${baseScore} &times; ${lr.bonus.multiplier} = ${finalScore} pts</div>
           </div>`;
           // Update cumulative score to include bonus
-          $('tr-team-a-score').textContent = lr.team_a_cumulative;
-          $('tr-team-b-score').textContent = lr.team_b_cumulative;
+          $('tr-team-a-score').textContent = Math.round(lr.team_a_cumulative * 10) / 10;
+          $('tr-team-b-score').textContent = Math.round(lr.team_b_cumulative * 10) / 10;
         }, 1500);
       }
 
       // Auto-advance countdown
-      let countdown = 20;
+      let countdown = 8;
       $('tr-advance-msg').textContent = 'Next round in ' + countdown + 's...';
       const advanceInterval = setInterval(() => {
         countdown--;
@@ -2390,9 +2407,9 @@
 
   function renderTeamGameOver(s) {
     $('tgo-team-a-name').textContent = s.teams.A.name;
-    $('tgo-team-a-score').textContent = s.teams.A.score;
+    $('tgo-team-a-score').textContent = Math.round(s.teams.A.score * 10) / 10;
     $('tgo-team-b-name').textContent = s.teams.B.name;
-    $('tgo-team-b-score').textContent = s.teams.B.score;
+    $('tgo-team-b-score').textContent = Math.round(s.teams.B.score * 10) / 10;
 
     const myTeam = s.your_team;
     const winning = s.winning_team;
@@ -2444,6 +2461,7 @@
         midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
+        $('host-cat-buttons').removeAttribute('data-built');
         startTeamPolling();
       }
     } catch (e) {
@@ -2466,6 +2484,7 @@
         midasSplashShown = false;
         teamVoteSubmitted = false;
         $('vote-categories').removeAttribute('data-built');
+        $('host-cat-buttons').removeAttribute('data-built');
         startTeamPolling();
       }
     } catch (e) {

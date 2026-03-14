@@ -56,7 +56,7 @@ MODE_NAMES = {
 TOTAL_ROUNDS = 10
 POINTS_CORRECT = 10
 POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
-ROUND_TIMEOUT = 20      # seconds before auto-submitting wrong answer
+ROUND_TIMEOUT = 15      # seconds before auto-submitting wrong answer
 
 COMPUTER_OPPONENTS = {
     "hal": {"name": "HAL 9000", "accuracy": 0.30, "min_time": 8.0, "max_time": 15.0},
@@ -73,7 +73,7 @@ game_lock = threading.Lock()  # protects all shared state
 
 team_game_state = {"queue": None}  # game_id of active team game being set up
 TEAM_DISCONNECT_TIMEOUT = 10       # seconds before player considered disconnected
-TEAM_RESULT_DISPLAY_TIME = 20      # seconds to show round results in team mode
+TEAM_RESULT_DISPLAY_TIME = 8       # seconds to show round results in team mode
 
 # ── Matchmaking Pool ─────────────────────────────────────────────────────────
 
@@ -592,22 +592,31 @@ def advance_round_team(game):
             team_correct[team] += 1
             game["players"][pid]["correct_count"] = game["players"][pid].get("correct_count", 0) + 1
 
-    a_base = team_correct["A"]
-    b_base = team_correct["B"]
+    a_raw = team_correct["A"]
+    b_raw = team_correct["B"]
     a_time = round(team_time["A"], 1)
     b_time = round(team_time["B"], 1)
-    a_has = team_player_count["A"] > 0
-    b_has = team_player_count["B"] > 0
+    a_count = team_player_count["A"]
+    b_count = team_player_count["B"]
+    a_has = a_count > 0
+    b_has = b_count > 0
 
-    # Determine bonus
+    # Normalize scores: (correct / team_size) * 10 so both teams on same scale
+    a_base = round((a_raw / a_count) * 10, 2) if a_has else 0
+    b_base = round((b_raw / b_count) * 10, 2) if b_has else 0
+    # Accuracy percentages for bonus comparison
+    a_pct = a_raw / a_count if a_has else 0
+    b_pct = b_raw / b_count if b_has else 0
+
+    # Determine bonus (compare accuracy percentages, not raw counts)
     bonus = None
-    if a_base > b_base and a_has and b_has and a_time < b_time:
+    if a_pct > b_pct and a_has and b_has and a_time < b_time:
         bonus = {"team": "A", "type": "exceeds_expectations",
                  "name": "Exceeds Expectations Bonus", "multiplier": 1.5}
-    elif b_base > a_base and a_has and b_has and b_time < a_time:
+    elif b_pct > a_pct and a_has and b_has and b_time < a_time:
         bonus = {"team": "B", "type": "exceeds_expectations",
                  "name": "Exceeds Expectations Bonus", "multiplier": 1.5}
-    elif a_base == b_base and a_base > 0 and a_has and b_has:
+    elif abs(a_pct - b_pct) < 0.001 and a_pct > 0 and a_has and b_has:
         if a_time < b_time:
             bonus = {"team": "A", "type": "quick_response",
                      "name": "Quick Response Bonus", "multiplier": 1.25}
@@ -632,10 +641,12 @@ def advance_round_team(game):
         "question": q["question"],
         "correct_answer": correct_answer,
         "team_results": {
-            "A": {"correct": a_base, "time": a_time, "base_score": a_base,
-                   "final_score": a_final, "name": game["teams"]["A"]["name"]},
-            "B": {"correct": b_base, "time": b_time, "base_score": b_base,
-                   "final_score": b_final, "name": game["teams"]["B"]["name"]},
+            "A": {"correct": a_raw, "total_players": a_count, "time": a_time,
+                   "base_score": a_base, "final_score": a_final,
+                   "name": game["teams"]["A"]["name"]},
+            "B": {"correct": b_raw, "total_players": b_count, "time": b_time,
+                   "base_score": b_base, "final_score": b_final,
+                   "name": game["teams"]["B"]["name"]},
         },
         "bonus": bonus,
         "team_a_cumulative": game["team_scores"]["A"],
@@ -861,7 +872,7 @@ def _check_round_timeout(game):
 def next_round_if_ready(game):
     """Move from round_result to active if enough time has passed."""
     if game["state"] == "round_result" and game["result_shown_at"]:
-        delay = TEAM_RESULT_DISPLAY_TIME if game.get("team_mode") else 6
+        delay = TEAM_RESULT_DISPLAY_TIME if game.get("team_mode") else 8
         if time.time() - game["result_shown_at"] > delay:
             game["state"] = "active"
             game["round_start"] = time.time()
@@ -1242,6 +1253,7 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
         if path == "/api/team/start":
             game_id = data.get("game_id")
             host_id = data.get("host_id")
+            host_category = data.get("category")  # optional: host picks category directly
             with game_lock:
                 if game_id not in games:
                     self._json_response({"error": "Game not found"}, 404)
@@ -1253,7 +1265,15 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 if game["state"] != "team_preview":
                     self._json_response({"error": "Not in preview"}, 400)
                     return
-                game["state"] = "team_vote"
+                if host_category and host_category in QUESTION_BANKS:
+                    # Host chose category directly — skip voting
+                    game["category_votes"] = {host_id: host_category}
+                    _resolve_category_vote(game)
+                    game["state"] = "active"
+                    game["round_start"] = time.time()
+                    team_game_state["queue"] = None
+                else:
+                    game["state"] = "team_vote"
             self._json_response({"ok": True})
             return
 
