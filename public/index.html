@@ -924,9 +924,10 @@
           <h2 style="margin-bottom:8px;">Team Game</h2>
           <p style="color:var(--muted);margin-bottom:24px;">Host a new game or join an existing one</p>
           <div style="display:flex;gap:12px;">
-            <button class="btn btn-green" style="flex:1;" onclick="hostTeamGame()">Host Game</button>
-            <button class="btn btn-primary" style="flex:1;" onclick="joinTeamGame()">Join Team Game</button>
+            <button class="btn btn-green" style="flex:1;" onclick="hostTeamGame(true)">Host &amp; Play</button>
+            <button class="btn" style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);" onclick="hostTeamGame(false)">Host Only</button>
           </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="joinTeamGame()">Join Team Game</button>
           <button class="btn" style="margin-top:12px;background:#334155;font-size:0.9rem;padding:10px 20px;" onclick="goToOpponentStep()">Back</button>
         </div>
 
@@ -1065,7 +1066,7 @@
         <div class="countdown-bar">
           <div class="countdown-bar-fill" id="countdown-bar-fill" style="width:100%;"></div>
         </div>
-        <span class="countdown-text" id="countdown-text">15s</span>
+        <span class="countdown-text" id="countdown-text">13s</span>
       </div>
       <div class="question-box" id="question-box">
         <div class="category-badge" id="q-category">Math</div>
@@ -1151,7 +1152,8 @@
       <div class="team-lobby-box">
         <div id="team-lobby-host" style="display:none;">
           <h2 style="margin-bottom:4px;">Team Assignment</h2>
-          <p style="color:var(--muted);margin-bottom:16px;">Assign players to teams</p>
+          <p style="color:var(--muted);margin-bottom:8px;">Assign players to teams</p>
+          <p id="host-spectator-badge" style="display:none;color:var(--yellow);font-size:0.85rem;margin-bottom:12px;font-weight:600;">Spectator Mode — you will not play</p>
           <div class="team-columns">
             <div class="team-column">
               <div class="team-column-header">
@@ -1241,7 +1243,7 @@
         <div class="countdown-bar">
           <div class="countdown-bar-fill" id="tg-countdown-bar-fill" style="width:100%;"></div>
         </div>
-        <span class="countdown-text" id="tg-countdown-text">15s</span>
+        <span class="countdown-text" id="tg-countdown-text">13s</span>
       </div>
       <div class="question-box" id="tg-question-box">
         <div class="category-badge" id="tg-q-category">Category</div>
@@ -1686,7 +1688,7 @@
       const timerEl = $('countdown-timer');
       if (s.time_remaining !== undefined) {
         timerEl.style.display = '';
-        const pct = (s.time_remaining / 15) * 100;
+        const pct = (s.time_remaining / 13) * 100;
         const fill = $('countdown-bar-fill');
         const text = $('countdown-text');
         fill.style.width = pct + '%';
@@ -1965,15 +1967,18 @@
   let lastTeamState = null;
   let midasSplashShown = false;
 
-  async function hostTeamGame() {
+  let isSpectatorHost = false;
+
+  async function hostTeamGame(hostPlaying) {
     const name = $('name-input').value.trim();
     if (!name) { $('name-error').style.display = 'block'; $('name-input').focus(); showJoinStep('join-step-name'); return; }
     saveName(name);
+    isSpectatorHost = !hostPlaying;
     try {
       const res = await fetch('/api/team/create', {
         method: 'POST',
         headers: API_HEADERS,
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, host_playing: hostPlaying }),
       });
       const data = await res.json();
       teamGameId = data.game_id;
@@ -2033,6 +2038,9 @@
   }
 
   function renderTeamState(s) {
+    // Track spectator status from server
+    if (s.is_spectator !== undefined) isSpectatorHost = s.is_spectator;
+
     if (s.state === 'team_lobby') {
       showScreen('team-lobby');
       if (s.is_host) {
@@ -2057,7 +2065,7 @@
         setTimeout(() => {
           showScreen('team-game');
           renderTeamGame(s);
-        }, 5000);
+        }, 6000);
         return;
       }
       showScreen('team-game');
@@ -2097,6 +2105,9 @@
   }
 
   function renderHostLobby(s) {
+    // Show spectator badge if host is not playing
+    $('host-spectator-badge').style.display = isSpectatorHost ? '' : 'none';
+
     // Team A players
     let aHtml = '';
     s.teams.A.players.forEach(name => {
@@ -2190,7 +2201,9 @@
     ['A', 'B'].forEach(tk => {
       const team = s.teams[tk];
       const cls = tk === 'A' ? 'team-a' : 'team-b';
-      html += `<div class="team-roster-col ${cls}">
+      const isMyTeam = s.your_team === tk;
+      const borderStyle = isMyTeam ? 'border:2px solid var(--' + (tk === 'A' ? 'accent' : 'accent2') + ');' : '';
+      html += `<div class="team-roster-col ${cls}" style="${borderStyle}">
         <h3>${team.name}</h3>`;
       team.players.forEach(name => {
         const isYou = name === s.your_name;
@@ -2201,6 +2214,9 @@
       }
       html += '</div>';
     });
+    if (isSpectatorHost) {
+      html += '<div style="text-align:center;color:var(--yellow);font-size:0.9rem;margin-top:8px;font-weight:600;">You are spectating this game</div>';
+    }
     $('team-preview-roster').innerHTML = html;
     if (s.is_host) {
       $('host-category-choice').style.display = '';
@@ -2238,11 +2254,16 @@
     if (!cats.dataset.built) {
       cats.dataset.built = '1';
       teamVoteSubmitted = false;
-      let html = '';
-      Object.entries(MODE_NAMES).forEach(([key, name]) => {
-        html += `<button class="vote-cat-btn" data-cat="${key}" onclick="submitTeamVote('${key}',this)">${name}</button>`;
-      });
-      cats.innerHTML = html;
+      if (isSpectatorHost) {
+        cats.innerHTML = '<p style="color:var(--muted);font-style:italic;padding:20px;">Spectating — waiting for players to vote...</p>';
+        teamVoteSubmitted = true;
+      } else {
+        let html = '';
+        Object.entries(MODE_NAMES).forEach(([key, name]) => {
+          html += `<button class="vote-cat-btn" data-cat="${key}" onclick="submitTeamVote('${key}',this)">${name}</button>`;
+        });
+        cats.innerHTML = html;
+      }
     }
     if (s.has_voted && !teamVoteSubmitted) {
       teamVoteSubmitted = true;
@@ -2266,6 +2287,21 @@
   }
 
   function renderTeamGame(s) {
+    // Highlight player's team on scoreboard
+    const aSide = document.querySelector('#screen-team-game .team-score-side.team-a');
+    const bSide = document.querySelector('#screen-team-game .team-score-side.team-b');
+    aSide.style.border = '';
+    bSide.style.border = '';
+    aSide.style.borderRadius = '';
+    bSide.style.borderRadius = '';
+    if (s.your_team === 'A') {
+      aSide.style.border = '2px solid var(--accent)';
+      aSide.style.borderRadius = '8px';
+    } else if (s.your_team === 'B') {
+      bSide.style.border = '2px solid var(--accent2)';
+      bSide.style.borderRadius = '8px';
+    }
+
     $('tg-team-a-name').textContent = s.teams.A.name;
     $('tg-team-a-score').textContent = Math.round(s.teams.A.score * 10) / 10;
     $('tg-team-b-name').textContent = s.teams.B.name;
@@ -2276,7 +2312,7 @@
     const timerEl = $('tg-countdown-timer');
     if (s.time_remaining !== undefined) {
       timerEl.style.display = '';
-      const pct = (s.time_remaining / 15) * 100;
+      const pct = (s.time_remaining / 13) * 100;
       const fill = $('tg-countdown-bar-fill');
       const text = $('tg-countdown-text');
       fill.style.width = pct + '%';
@@ -2318,17 +2354,29 @@
           const btn = document.createElement('button');
           btn.className = 'choice-btn';
           btn.textContent = c;
-          btn.onclick = () => submitTeamAnswer(c, btn);
+          if (isSpectatorHost) {
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'default';
+          } else {
+            btn.onclick = () => submitTeamAnswer(c, btn);
+          }
           box.appendChild(btn);
         });
       }
 
-      if (s.already_answered) {
+      if (isSpectatorHost) {
+        // Spectator sees the question and timer but can't answer
+        $('tg-waiting-answer').style.display = 'block';
+        $('tg-waiting-answer').textContent = 'Spectating — watching players answer...';
+        $('tg-teammate-progress').style.display = 'none';
+      } else if (s.already_answered) {
         box.querySelectorAll('.choice-btn').forEach(b => {
           b.disabled = true;
           if (b.textContent === s.your_choice) b.classList.add('selected');
         });
         $('tg-waiting-answer').style.display = 'block';
+        $('tg-waiting-answer').textContent = 'Waiting for teammates...';
         if (s.teammate_progress) {
           $('tg-teammate-progress').style.display = '';
           $('tg-teammate-progress').textContent = `${s.teammate_progress.answered}/${s.teammate_progress.total} teammates have answered`;
@@ -2355,6 +2403,21 @@
   let teamResultBonusTimer = null;
 
   function renderTeamResult(s) {
+    // Highlight player's team on scoreboard
+    const aSide = document.querySelector('#screen-team-result .team-score-side.team-a');
+    const bSide = document.querySelector('#screen-team-result .team-score-side.team-b');
+    aSide.style.border = '';
+    bSide.style.border = '';
+    aSide.style.borderRadius = '';
+    bSide.style.borderRadius = '';
+    if (s.your_team === 'A') {
+      aSide.style.border = '2px solid var(--accent)';
+      aSide.style.borderRadius = '8px';
+    } else if (s.your_team === 'B') {
+      bSide.style.border = '2px solid var(--accent2)';
+      bSide.style.borderRadius = '8px';
+    }
+
     $('tr-team-a-name').textContent = s.teams.A.name;
     $('tr-team-a-score').textContent = Math.round(s.teams.A.score * 10) / 10;
     $('tr-team-b-name').textContent = s.teams.B.name;
@@ -2411,6 +2474,17 @@
     $('tgo-team-b-name').textContent = s.teams.B.name;
     $('tgo-team-b-score').textContent = Math.round(s.teams.B.score * 10) / 10;
 
+    // Highlight player's team on final score cards
+    const scoreCards = document.querySelectorAll('#screen-team-gameover .final-score-card');
+    scoreCards.forEach(c => { c.style.border = ''; c.style.borderRadius = ''; });
+    if (s.your_team === 'A' && scoreCards[0]) {
+      scoreCards[0].style.border = '2px solid var(--accent)';
+      scoreCards[0].style.borderRadius = '12px';
+    } else if (s.your_team === 'B' && scoreCards[1]) {
+      scoreCards[1].style.border = '2px solid var(--accent2)';
+      scoreCards[1].style.borderRadius = '12px';
+    }
+
     const myTeam = s.your_team;
     const winning = s.winning_team;
 
@@ -2419,6 +2493,13 @@
       $('tgo-icon').innerHTML = '&#129309;';
       $('tgo-title').innerHTML = '<span class="tie-text">It\'s a Tie!</span>';
       $('tgo-subtitle').textContent = 'Evenly matched teams!';
+    } else if (isSpectatorHost) {
+      // Spectator sees neutral result
+      const winnerName = s.teams[winning].name;
+      $('tgo-icon').innerHTML = '&#127942;';
+      $('tgo-title').innerHTML = '<span class="win-text">' + winnerName + ' Wins!</span>';
+      $('tgo-subtitle').textContent = isAwhTeam ? '' : 'Great game!';
+      if (!document.getElementById('fireworks-canvas')) launchFireworks(5000);
     } else if (winning === myTeam) {
       $('tgo-icon').innerHTML = '&#127942;';
       $('tgo-title').innerHTML = '<span class="win-text">' + (isAwhTeam ? 'You Won - Take the Weekend Off!' : 'Your Team Wins!') + '</span>';

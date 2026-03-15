@@ -56,10 +56,10 @@ MODE_NAMES = {
 TOTAL_ROUNDS = 10
 POINTS_CORRECT = 10
 POINTS_SPEED_BONUS = 5  # bonus for answering first AND correctly
-ROUND_TIMEOUT = 15      # seconds before auto-submitting wrong answer
+ROUND_TIMEOUT = 13      # seconds before auto-submitting wrong answer
 
 COMPUTER_OPPONENTS = {
-    "hal": {"name": "HAL 9000", "accuracy": 0.30, "min_time": 8.0, "max_time": 15.0},
+    "hal": {"name": "HAL 9000", "accuracy": 0.30, "min_time": 8.0, "max_time": 13.0},
     "terminator": {"name": "Terminator", "accuracy": 0.65, "min_time": 4.0, "max_time": 8.0},
     "claude": {"name": "Claude", "accuracy": 0.92, "min_time": 1.5, "max_time": 4.0},
 }
@@ -220,6 +220,20 @@ def new_game(mode="fun", mode2=None):
     return game
 
 
+def _is_spectator(game, player_id):
+    """Return True if this player is a non-playing host (spectator)."""
+    return (game.get("team_mode") and
+            player_id == game.get("host_id") and
+            not game.get("host_playing", True))
+
+
+def _get_active_team_players(game):
+    """Return list of active, non-spectator player IDs."""
+    disconnected = game.get("disconnected", [])
+    return [pid for pid in game["player_order"]
+            if pid not in disconnected and not _is_spectator(game, pid)]
+
+
 def _get_player_team(game, player_id):
     """Return 'A' or 'B' for the player's team, or None."""
     for team_key in ("A", "B"):
@@ -299,13 +313,14 @@ def _generate_questions_for_modes(modes):
     return all_questions
 
 
-def new_team_game(host_id, host_name):
+def new_team_game(host_id, host_name, host_playing=True):
     """Create a new team game (questions generated after category vote)."""
     game_id = str(uuid.uuid4())[:8]
     game = {
         "id": game_id,
         "team_mode": True,
         "host_id": host_id,
+        "host_playing": host_playing,
         "players": {
             host_id: {"name": host_name, "score": 0, "total_time": 0.0, "correct_count": 0},
         },
@@ -419,6 +434,7 @@ def get_team_safe_state(game, player_id):
     g = game
     p = g["players"].get(player_id, {})
     my_team = _get_player_team(g, player_id)
+    spectator = _is_spectator(g, player_id)
     state = {
         "game_id": g["id"],
         "state": g["state"],
@@ -426,6 +442,8 @@ def get_team_safe_state(game, player_id):
         "your_name": p.get("name", ""),
         "your_team": my_team,
         "is_host": player_id == g.get("host_id"),
+        "is_spectator": spectator,
+        "host_playing": g.get("host_playing", True),
         "mode": g.get("mode"),
         "teams": {
             "A": {
@@ -447,7 +465,8 @@ def get_team_safe_state(game, player_id):
     if g["state"] == "team_lobby":
         assigned = set(g["teams"]["A"]["players"]) | set(g["teams"]["B"]["players"])
         unassigned = [{"player_id": pid, "name": g["players"][pid]["name"]}
-                      for pid in g["player_order"] if pid not in assigned]
+                      for pid in g["player_order"]
+                      if pid not in assigned and not _is_spectator(g, pid)]
         state["unassigned_players"] = unassigned
         state["team_finalized"] = g.get("team_finalized", False)
         if player_id == g.get("host_id"):
@@ -459,10 +478,13 @@ def get_team_safe_state(game, player_id):
     if g["state"] == "team_preview":
         state["is_host"] = player_id == g.get("host_id")
     if g["state"] == "team_vote":
-        total_players = len(g["player_order"])
+        voting_players = [pid for pid in g["player_order"] if not _is_spectator(g, pid)]
+        total_players = len(voting_players)
         votes_in = len(g.get("category_votes", {}))
         state["vote_progress"] = {"voted": votes_in, "total": total_players}
         state["has_voted"] = player_id in g.get("category_votes", {})
+        if spectator:
+            state["has_voted"] = True  # spectator doesn't vote, show as done
     if g["state"] in ("active", "round_result", "finished"):
         state["round"] = g["round"] + 1
         state["total_rounds"] = TOTAL_ROUNDS
@@ -486,7 +508,8 @@ def get_team_safe_state(game, player_id):
             state["your_choice"] = rd_answers[player_id]["choice"]
         if my_team:
             teammates = g["teams"][my_team]["players"]
-            active_teammates = [pid for pid in teammates if pid not in g.get("disconnected", [])]
+            active_teammates = [pid for pid in teammates
+                                if pid not in g.get("disconnected", []) and not _is_spectator(g, pid)]
             answered_teammates = sum(1 for pid in active_teammates if pid in rd_answers)
             state["teammate_progress"] = {"answered": answered_teammates, "total": len(active_teammates)}
     if g["state"] == "round_result":
@@ -566,8 +589,7 @@ def advance_round_team(game):
     """Check if team round is complete and advance."""
     rd = game["round"]
     rd_answers = game["answers"].get(rd, {})
-    active_players = [pid for pid in game["player_order"]
-                      if pid not in game.get("disconnected", [])]
+    active_players = _get_active_team_players(game)
     for pid in active_players:
         if pid not in rd_answers:
             return  # Still waiting
@@ -735,7 +757,7 @@ def _check_team_disconnects(game):
     now = time.time()
     disconnected = game.get("disconnected", [])
     for pid in game["player_order"]:
-        if pid in disconnected:
+        if pid in disconnected or _is_spectator(game, pid):
             continue
         last_poll = game["last_poll"].get(pid, 0)
         if now - last_poll > TEAM_DISCONNECT_TIMEOUT:
@@ -761,7 +783,7 @@ def _calculate_mvp(game):
     best_avg_time = float('inf')
     disconnected = game.get("disconnected", [])
     for pid in game["player_order"]:
-        if pid in disconnected:
+        if pid in disconnected or _is_spectator(game, pid):
             continue
         p = game["players"][pid]
         correct_count = p.get("correct_count", 0)
@@ -852,8 +874,7 @@ def _check_round_timeout(game):
     if rd not in game["answers"]:
         game["answers"][rd] = {}
     if game.get("team_mode"):
-        active_players = [pid for pid in game["player_order"]
-                          if pid not in game.get("disconnected", [])]
+        active_players = _get_active_team_players(game)
     else:
         active_players = game["player_order"]
     for pid in active_players:
@@ -1163,9 +1184,10 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
 
         if path == "/api/team/create":
             name = data.get("name", "Player")[:20].strip() or "Player"
+            host_playing = data.get("host_playing", True)
             player_id = str(uuid.uuid4())[:8]
             with game_lock:
-                game = new_team_game(player_id, name)
+                game = new_team_game(player_id, name, host_playing=host_playing)
                 team_game_state["queue"] = game["id"]
             self._json_response({"game_id": game["id"], "player_id": player_id})
             return
@@ -1296,7 +1318,9 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                     return
                 game["category_votes"][player_id] = category
                 game["last_poll"][player_id] = time.time()
-                if len(game["category_votes"]) >= len(game["player_order"]):
+                voting_players = [pid for pid in game["player_order"]
+                                  if not _is_spectator(game, pid)]
+                if len(game["category_votes"]) >= len(voting_players):
                     _resolve_category_vote(game)
                     game["state"] = "active"
                     game["round_start"] = time.time()
@@ -1322,7 +1346,8 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                 # Create new game with same teams
                 host_id = old_game.get("host_id")
                 host_name = old_game["players"].get(host_id, {}).get("name", "Host")
-                new_g = new_team_game(host_id, host_name)
+                host_playing = old_game.get("host_playing", True)
+                new_g = new_team_game(host_id, host_name, host_playing=host_playing)
                 # Copy team structure (only players still connected)
                 disconnected = old_game.get("disconnected", [])
                 for tk in ("A", "B"):
@@ -1334,7 +1359,8 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                                 new_g["players"][pid] = {"name": pname, "score": 0, "total_time": 0.0, "correct_count": 0}
                                 new_g["player_order"].append(pid)
                                 new_g["last_poll"][pid] = time.time()
-                            new_g["teams"][tk]["players"].append(pid)
+                            if not _is_spectator(old_game, pid):
+                                new_g["teams"][tk]["players"].append(pid)
                 new_g["team_finalized"] = True
                 new_g["state"] = "team_vote"
                 old_game["rematch_game_id"] = new_g["id"]
@@ -1358,7 +1384,8 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
                     return
                 host_id = old_game.get("host_id")
                 host_name = old_game["players"].get(host_id, {}).get("name", "Host")
-                new_g = new_team_game(host_id, host_name)
+                host_playing = old_game.get("host_playing", True)
+                new_g = new_team_game(host_id, host_name, host_playing=host_playing)
                 # Add all non-disconnected players back to lobby (unassigned)
                 disconnected = old_game.get("disconnected", [])
                 for pid in old_game["player_order"]:
@@ -1458,6 +1485,10 @@ class GameHandler(http.server.BaseHTTPRequestHandler):
 
                 if player_id in game["answers"][rd]:
                     self._json_response({"error": "Already answered"}, 400)
+                    return
+
+                if _is_spectator(game, player_id):
+                    self._json_response({"error": "Spectator cannot answer"}, 403)
                     return
 
                 game["last_poll"][player_id] = time.time()
